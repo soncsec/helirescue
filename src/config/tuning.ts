@@ -100,8 +100,8 @@ export const BASE_ART = {
  * for the touch controls (M2.5).
  */
 export const HUD = {
-  /** Browser monospace until the owner approves a HUD font. */
-  font: 'monospace',
+  /** Press Start 2P (OFL, bundled; approved 2026-10-18), drawn at its native 8 px. */
+  font: '"Press Start 2P", monospace',
   fontSize: 8,
   colour: '#e6ebf2',
   accent: '#ffd23f',
