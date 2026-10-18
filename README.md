@@ -1,8 +1,8 @@
-# Game Template
+# HeliRescue
 
-A Soncrant Arcade game: Phaser 4, TypeScript and Vite, with the CC0 Ansimuz art pack. It will be playable at `games.soncrant.com/game-template/`.
+A Soncrant Arcade game: Phaser 4, TypeScript and Vite, with the CC0 Ansimuz art pack. It will be playable at `games.soncrant.com/helirescue/`.
 
-**Staging:** https://soncsec.github.io/game-template/ (after GitHub Pages is turned on; updated on every merge to `main`).
+**Staging:** https://soncsec.github.io/helirescue/ (after GitHub Pages is turned on; updated on every merge to `main`).
 
 | Doc | Contents |
 |---|---|
@@ -19,7 +19,7 @@ Follow `NEW-GAME.md` in [soncsec/games-portal](https://github.com/soncsec/games-
 
 ```sh
 npm ci
-npm run dev          # http://localhost:__DEV_PORT__
+npm run dev          # http://localhost:5180
 npm run check        # everything CI runs
 ```
 

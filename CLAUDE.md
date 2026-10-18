@@ -1,8 +1,16 @@
-# CLAUDE.md — Development Rules for Game Template
+# CLAUDE.md — Development Rules for HeliRescue
 
 > From `soncsec/game-template`. The workflow, quality and security rules were approved by the owner on 2026-10-17 for Star Destroyer and apply to every Soncrant Arcade game.
 
 Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (current task) before starting work.
+
+## Owner's priorities (2026-10-18)
+
+- **Security is the top priority.** Never deploy anything that could be exploited, expose data that isn't meant to be reached, let unwanted commands run, or carry any other security risk. If in doubt, don't deploy; raise it with the owner first.
+- Ask questions whenever something is unclear, including the owner's own requests.
+- The fonts, the art pack and the deployment pipeline work well for the other games. Suggest anything that would make a better product, and ask before acting on it.
+- Get a playable build early and keep it playable, so the owner can give feedback sooner.
+- Remind the owner about unanswered questions and PRs waiting for review.
 
 ## Roles
 
@@ -14,10 +22,10 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 - Change files only inside this repo. Never edit another game's folder, the portal repo, or shared assets.
 - `legacy/` (the art pack) is read-only. It is a link to the shared `~/dev/games/_assets/legacy/`. Copy what you need into `public/assets/`.
 - Changes another repo needs (for example, this game's portal card) go through a PR or issue on that repo.
-- On the production server, this game may only write to its own release folder and link: `/srv/games-releases/game-template/` and `/var/www/html/soncrant.com/pub/games/game-template` (enforced by `scripts/release-remote.sh`).
-- Local dev server port: **__DEV_PORT__**. Playwright's test server uses **__E2E_PORT__**. Other games use other ports.
+- On the production server, this game may only write to its own release folder and link: `/srv/games-releases/helirescue/` and `/var/www/html/soncrant.com/pub/games/helirescue` (enforced by `scripts/release-remote.sh`).
+- Local dev server port: **5180**. Playwright's test server uses **6181**. Other games use other ports.
 - Other games' sessions share this machine. Stop only processes you started, by PID or by your own port (e.g. the pid listening on your Playwright port). Never stop processes by name (`pkill -f vite`, `pkill -f "vite preview"`, `killall node`): that kills other sessions' servers mid-run.
-- This game's portal card is its own file in the portal repo, `games/game-template.json`. Change it only by PR to `soncsec/games-portal`.
+- This game's portal card is its own file in the portal repo, `games/helirescue.json`. Change it only by PR to `soncsec/games-portal`.
 
 ## Always ask the owner before
 
