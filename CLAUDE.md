@@ -77,6 +77,7 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 - Update `ROADMAP.md` checkboxes and status as tasks complete.
 - Record new or changed decisions as ADRs in `ARCHITECTURE.md`, after approval.
 - Update `PROJECT.md` when the owner approves scope changes.
+- After changing any of the four docs, run `python3 tools/docs-page/build.py` and publish the output to the HeliRescue docs artifact (https://claude.ai/artifact/KN8heqnPfx15tcX8vqXJwB, pass it as `url`). Never publish to another game's docs artifact.
 
 ## Assets
 
