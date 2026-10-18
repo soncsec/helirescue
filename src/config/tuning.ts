@@ -32,6 +32,57 @@ export const FLIGHT = {
   maxStep: 1 / 120,
 } as const;
 
+/**
+ * The helicopter's outline around its centre, measured from the side-view
+ * sprite (108x48) facing right: skids on the bottom row, 19 px behind to 37 px
+ * in front of the centre; the lower body reaches 21 px back and 38 px forward.
+ */
+export const HELI_SHAPE = {
+  bottom: 24,
+  skidBack: 19,
+  skidFront: 37,
+  bodyBack: 21,
+  bodyFront: 38,
+  bodyHeight: 24,
+} as const;
+
+/**
+ * Landing rules (H3, src/logic/landing.ts). Sinking with no input (12 px/s) is
+ * always safe; a full-speed dive (92 px/s) costs 32 health.
+ */
+export const LANDING = {
+  maxHealth: 100,
+  safeSpeed: 40,
+  damagePerSpeed: 0.6,
+  landingZone: 16,
+  respawnSeconds: 2,
+} as const;
+
+/** Effects for landings and crashes. */
+export const LANDING_FX = {
+  /** Camera shake on a hard landing: duration (ms) and strength. */
+  shakeMs: 250,
+  shakeStrength: 0.01,
+  /** Rotor speed while landed. */
+  rotorLanded: 0.5,
+  /** How far below the street the flight bounds reach, so landings there register their speed. */
+  groundSlack: 8,
+} as const;
+
+/** Temporary health bar, top-left (the full HUD comes in M2.4). */
+export const HEALTH_BAR = {
+  x: 6,
+  y: 6,
+  width: 60,
+  height: 4,
+  frame: 0x0b0814,
+  empty: 0x3a2a44,
+  colour: 0x5fd35f,
+  lowColour: 0xe0503a,
+  /** Turns red at or below this much health. */
+  lowAt: 30,
+} as const;
+
 /** Shared look of the city: street, background layers and building tiles. */
 export const SCENERY = {
   /** Top of the street. */

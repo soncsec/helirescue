@@ -1,0 +1,243 @@
+import { describe, expect, it } from 'vitest';
+import { FLIGHT, HELI_SHAPE, LANDING } from '../../src/config/tuning';
+import type { FlightState } from '../../src/logic/flight';
+import {
+  landingDamage,
+  newHeli,
+  span,
+  updateHeli,
+  type Heli,
+  type HeliRules,
+  type HeliWorld,
+} from '../../src/logic/landing';
+import type { Axis } from '../../src/logic/movement';
+import type { Roof } from '../../src/logic/world';
+
+const shape = {
+  bottom: 24,
+  skidBack: 19,
+  skidFront: 37,
+  bodyBack: 21,
+  bodyFront: 38,
+  bodyHeight: 24,
+};
+const landing = {
+  maxHealth: 100,
+  safeSpeed: 40,
+  damagePerSpeed: 0.6,
+  landingZone: 16,
+  respawnSeconds: 2,
+};
+const rules: HeliRules = { flight: FLIGHT, landing, shape };
+
+const roof: Roof = { left: 200, right: 328, y: 150, base: false };
+const street: Roof = { left: 0, right: 1000, y: 254, base: false };
+const world: HeliWorld = {
+  surfaces: [roof, street],
+  buildings: [roof],
+  groundY: 254,
+  people: [],
+  bounds: { minX: 54, maxX: 946, minY: 24, maxY: 254 - 24 + 8 },
+  spawn: { x: 60, y: 100 },
+};
+
+const none: Axis = { x: 0, y: 0 };
+const up: Axis = { x: 0, y: -1 };
+const down: Axis = { x: 0, y: 1 };
+const right: Axis = { x: 1, y: 0 };
+
+/** A helicopter at (x, y) with a given velocity. */
+function heliAt(x: number, y: number, vy = 0, vx = 0): Heli {
+  const h = newHeli(x, y, landing);
+  const flight: FlightState = { ...h.flight, vx, vy };
+  return { ...h, flight };
+}
+
+/** Runs the rules at 60 fps until `until` is true or `seconds` pass; returns every event. */
+function run(
+  h: Heli,
+  input: Axis,
+  seconds: number,
+  w: HeliWorld = world,
+  until: (h: Heli) => boolean = () => false,
+): { heli: Heli; events: string[] } {
+  let heli = h;
+  const events: string[] = [];
+  for (let i = 0; i < Math.round(seconds * 60); i++) {
+    const r = updateHeli(heli, input, 1 / 60, w, rules);
+    heli = r.heli;
+    if (r.event.kind !== 'none') events.push(r.event.kind);
+    if (until(heli)) break;
+  }
+  return { heli, events };
+}
+
+describe('span', () => {
+  it('flips with the facing direction', () => {
+    expect(span(100, 1, 19, 37)).toEqual([81, 137]);
+    expect(span(100, -1, 19, 37)).toEqual([63, 119]);
+  });
+});
+
+describe('landingDamage', () => {
+  it('is zero up to the safe speed, then grows with speed', () => {
+    expect(landingDamage(0, landing)).toBe(0);
+    expect(landingDamage(40, landing)).toBe(0);
+    expect(landingDamage(41, landing)).toBe(1);
+    expect(landingDamage(90, landing)).toBe(30);
+  });
+});
+
+describe('safe landing', () => {
+  it('sinks gently onto a roof and lands with no damage', () => {
+    const start = heliAt(250, 100);
+    const { heli, events } = run(start, none, 10, world, (h) => h.mode === 'landed');
+    expect(heli.mode).toBe('landed');
+    expect(heli.on).toEqual(roof);
+    expect(heli.health).toBe(100);
+    expect(heli.flight.y + shape.bottom).toBe(roof.y);
+    expect(heli.flight).toMatchObject({ vx: 0, vy: 0, tilt: 0 });
+    expect(events).toEqual(['landed']);
+  });
+
+  it('shows `landing` just above a landing spot', () => {
+    const h = heliAt(250, roof.y - shape.bottom - 10, 10);
+    expect(updateHeli(h, none, 1 / 60, world, rules).heli.mode).toBe('landing');
+    const high = heliAt(250, 60, 10);
+    expect(updateHeli(high, none, 1 / 60, world, rules).heli.mode).toBe('flying');
+    const climbing = heliAt(250, roof.y - shape.bottom - 10, -20);
+    expect(updateHeli(climbing, none, 1 / 60, world, rules).heli.mode).toBe('flying');
+  });
+
+  it('lands on the street too', () => {
+    const { heli } = run(heliAt(600, 200), none, 10, world, (h) => h.mode === 'landed');
+    expect(heli.on).toEqual(street);
+  });
+
+  it('stays put while landed, ignoring left, right and down', () => {
+    const landed = run(heliAt(250, 100), none, 10, world, (h) => h.mode === 'landed').heli;
+    for (const input of [none, down, right, { x: -1, y: 0 } as Axis]) {
+      expect(updateHeli(landed, input, 1, world, rules)).toEqual({
+        heli: landed,
+        event: { kind: 'none' },
+      });
+    }
+  });
+
+  it('takes off with up', () => {
+    const landed = run(heliAt(250, 100), none, 10, world, (h) => h.mode === 'landed').heli;
+    const r = updateHeli(landed, up, 1 / 60, world, rules);
+    expect(r.event).toEqual({ kind: 'took-off' });
+    expect(r.heli.mode).toBe('flying');
+    expect(r.heli.on).toBeNull();
+    const later = run(r.heli, up, 0.5).heli;
+    expect(later.flight.y).toBeLessThan(landed.flight.y - 10);
+  });
+});
+
+describe('hard landing', () => {
+  it('costs health in proportion to the speed over the safe limit', () => {
+    const fast = heliAt(250, roof.y - shape.bottom - 1, 90);
+    const r = updateHeli(fast, down, 1 / 60, world, rules);
+    expect(r.event.kind).toBe('hard-landing');
+    expect(r.heli.mode).toBe('landed');
+    expect(r.heli.health).toBeLessThan(100);
+    expect(r.heli.health).toBeGreaterThan(50);
+  });
+
+  it('happens when diving onto a roof with down held', () => {
+    const { heli, events } = run(heliAt(250, 40), down, 5, world, (h) => h.mode === 'landed');
+    expect(events).toEqual(['hard-landing']);
+    expect(heli.health).toBeLessThan(100);
+  });
+
+  it('crashes when health runs out, then respawns at base after a delay', () => {
+    const weak = { ...heliAt(250, roof.y - shape.bottom - 1, 90), health: 5 };
+    const r = updateHeli(weak, down, 1 / 60, world, rules);
+    expect(r.event).toEqual({ kind: 'crashed' });
+    expect(r.heli.mode).toBe('crashed');
+    expect(r.heli.health).toBe(0);
+
+    const waiting = run(r.heli, up, 1.5);
+    expect(waiting.heli.mode).toBe('crashed');
+    const back = run(waiting.heli, none, 1, world, (h) => h.mode !== 'crashed');
+    expect(back.events).toEqual(['respawned']);
+    expect(back.heli).toMatchObject({ mode: 'flying', health: 100, facing: 1 });
+    expect(back.heli.flight).toMatchObject({ x: 60, y: 100, vx: 0, vy: 0 });
+  });
+});
+
+describe('edges and walls', () => {
+  it('slides off a roof edge instead of landing half on it', () => {
+    // Skids hang 10 px over the left edge.
+    const h = heliAt(roof.left - 10 + shape.skidBack, 100);
+    const { heli, events } = run(h, none, 30, world, (x) => x.mode === 'landed');
+    expect(heli.on).toEqual(street);
+    expect(events[0]).toBe('bumped');
+    const [, bodyRight] = span(heli.flight.x, 1, shape.bodyBack, shape.bodyFront);
+    expect(bodyRight).toBeLessThanOrEqual(roof.left);
+  });
+
+  it('stops at a wall when flying into the side of a building', () => {
+    const low = heliAt(120, 200);
+    const { heli, events } = run(low, right, 3);
+    expect(events).toContain('bumped');
+    const [, bodyRight] = span(heli.flight.x, 1, shape.bodyBack, shape.bodyFront);
+    expect(bodyRight).toBeLessThanOrEqual(roof.left);
+    expect(heli.health).toBe(100);
+  });
+
+  it('flies over a building when high enough', () => {
+    const high = heliAt(120, 100);
+    const { heli } = run(high, { x: 1, y: -1 }, 3);
+    expect(heli.flight.x).toBeGreaterThan(roof.right);
+  });
+});
+
+describe('people', () => {
+  const person = { x: 260, halfWidth: 6, top: roof.y - 20 };
+  const withPerson: HeliWorld = { ...world, people: [person] };
+
+  it('never lands on a person: it rests above them instead', () => {
+    const { heli, events } = run(heliAt(260, 60), down, 5, withPerson);
+    expect(heli.mode).not.toBe('landed');
+    expect(heli.flight.y + shape.bottom).toBeCloseTo(person.top);
+    expect(events).toContain('blocked');
+    expect(heli.health).toBe(100);
+  });
+
+  it('lands once moved clear of the person', () => {
+    const blocked = run(heliAt(290, 60), none, 10, {
+      ...world,
+      people: [{ ...person, x: 300 }],
+    }).heli;
+    expect(blocked.mode).not.toBe('landed');
+    const clear = { ...world, people: [{ ...person, x: 210 }] };
+    const { heli } = run(blocked, none, 10, clear, (h) => h.mode === 'landed');
+    expect(heli.mode).toBe('landed');
+  });
+
+  it('ignores people the skids are clear of', () => {
+    const aside: HeliWorld = { ...world, people: [{ ...person, x: 205 }] };
+    const { heli } = run(heliAt(290, 100), none, 10, aside, (h) => h.mode === 'landed');
+    expect(heli.mode).toBe('landed');
+  });
+});
+
+describe('tuning', () => {
+  it('lands safely when sinking with no input', () => {
+    expect(FLIGHT.gravity / FLIGHT.dragY).toBeLessThanOrEqual(LANDING.safeSpeed);
+  });
+
+  it('makes a full-speed dive a hard landing, but not an instant crash', () => {
+    const dive = (FLIGHT.descend + FLIGHT.gravity) / FLIGHT.dragY;
+    const damage = landingDamage(dive, LANDING);
+    expect(damage).toBeGreaterThan(0);
+    expect(damage).toBeLessThan(LANDING.maxHealth / 2);
+  });
+
+  it('matches the helicopter sprite (108x48, centre origin)', () => {
+    expect(HELI_SHAPE.bottom).toBe(24);
+    expect(HELI_SHAPE.skidBack + HELI_SHAPE.skidFront).toBeLessThan(108);
+  });
+});
