@@ -1,9 +1,19 @@
 import Phaser from 'phaser';
-import { IMAGES, SHEETS, TILE, type SheetSpec } from '../config/assets';
+import { IMAGES, SHEETS, TILE } from '../config/assets';
 import { CC_BY_CREDIT } from '../config/credits';
 import { ART_VIEWER, DEFAULT_SEED, GAME_HEIGHT, GAME_WIDTH } from '../config/tuning';
 import { layoutBuilding } from '../logic/buildingLayout';
 import { createRng } from '../logic/rng';
+import {
+  addBackdrop,
+  addBuilding,
+  addStreet,
+  loadArt,
+  makeAnims,
+  missingArt,
+  scrollBackdrop,
+  type ParallaxLayer,
+} from './scenery';
 
 type Mode = 'night' | 'war' | 'friendly' | 'enemies';
 
@@ -33,7 +43,7 @@ const A = ART_VIEWER;
 export class ArtScene extends Phaser.Scene {
   private mode: Mode = 'night';
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private layers: { sprite: Phaser.GameObjects.TileSprite; factor: number }[] = [];
+  private layers: ParallaxLayer[] = [];
 
   constructor() {
     super('Art');
@@ -45,20 +55,11 @@ export class ArtScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.on('loaderror', (file: Phaser.Loader.File) => {
-      console.error(`art viewer: could not load ${file.key} (${String(file.src)})`);
-    });
-    for (const s of SHEETS) {
-      this.load.spritesheet(s.key, s.file, {
-        frameWidth: s.frameWidth,
-        frameHeight: s.frameHeight,
-      });
-    }
-    for (const img of IMAGES) this.load.image(img.key, img.file);
+    loadArt(this);
   }
 
   create(): void {
-    for (const s of SHEETS) this.makeAnim(s);
+    makeAnims(this);
     if (this.mode === 'friendly' || this.mode === 'enemies') this.buildLineup(this.mode);
     else this.buildMock(this.mode);
     this.buildHud();
@@ -80,61 +81,24 @@ export class ArtScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const dir = (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0);
     cam.scrollX += (dir * A.scrollSpeed * deltaMs) / 1000;
-    for (const l of this.layers) l.sprite.tilePositionX = cam.scrollX * l.factor;
+    scrollBackdrop(this.layers, cam.scrollX);
   }
 
   snapshot(): ArtSnapshot {
-    const missing = [...SHEETS, ...IMAGES]
-      .map((a) => a.key)
-      .filter((k) => !this.textures.exists(k) || this.textures.get(k).key === '__MISSING');
-    return { mode: this.mode, missing };
-  }
-
-  private makeAnim(s: SheetSpec): void {
-    if (s.fps === 0 || this.anims.exists(s.key)) return;
-    this.anims.create({
-      key: s.key,
-      frames: this.anims.generateFrameNumbers(s.key, { start: 0, end: s.frames - 1 }),
-      frameRate: s.fps,
-      repeat: -1,
-    });
+    return { mode: this.mode, missing: missingArt(this) };
   }
 
   private buildMock(theme: 'night' | 'war'): void {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, A.worldWidth, GAME_HEIGHT);
-    cam.setBackgroundColor(A.skyColour[theme]);
-
-    const prefix = theme === 'night' ? 'city' : 'industrial';
-    const layer = (part: 'sky' | 'far' | 'near'): void => {
-      const tex = this.textures.get(`${prefix}-${part}`).getSourceImage();
-      const sprite = this.add
-        .tileSprite(0, A.groundY, GAME_WIDTH, tex.height, `${prefix}-${part}`)
-        .setOrigin(0, 1)
-        .setScrollFactor(0);
-      this.layers.push({ sprite, factor: A.parallax[part] });
-    };
-    layer('sky');
-    layer('far');
-    layer('near');
-
-    this.add
-      .rectangle(0, A.groundY, A.worldWidth, GAME_HEIGHT - A.groundY, A.streetColour[theme])
-      .setOrigin(0, 0);
-    this.add.rectangle(0, A.groundY, A.worldWidth, 1, A.streetEdgeColour[theme]).setOrigin(0, 0);
+    this.layers = addBackdrop(this, theme);
+    addStreet(this, theme, A.worldWidth);
 
     const tiles = `buildings-${theme}`;
     const rng = createRng(DEFAULT_SEED);
     const roofs = A.buildings.map((b) => {
-      const rows = layoutBuilding(b, rng);
-      const top = A.groundY - b.height * A.tile;
-      rows.forEach((row, y) =>
-        row.forEach((name, x) => {
-          this.add.image(b.x + x * A.tile, top + y * A.tile, tiles, TILE[name]).setOrigin(0, 0);
-        }),
-      );
-      this.add.image(b.x + b.width * A.tile, A.groundY, tiles, TILE.rubble).setOrigin(0, 1);
-      return { x: b.x, width: b.width * A.tile, y: top };
+      const r = addBuilding(this, theme, b, rng);
+      return { x: r.left, width: r.right - r.left, y: r.y };
     });
     const roof = (i: number): { x: number; width: number; y: number } => {
       const r = roofs[i];

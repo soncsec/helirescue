@@ -1,12 +1,33 @@
 import Phaser from 'phaser';
-import { DEFAULT_SEED, GAME_HEIGHT, GAME_WIDTH, PLAYER } from '../config/tuning';
-import { screenBounds, step, type Axis, type Point } from '../logic/movement';
-import { createRng, type Rng } from '../logic/rng';
+import { sheetSpec } from '../config/assets';
+import { CAMERA, DEFAULT_SEED, GAME_HEIGHT, PLAYER, SCENERY } from '../config/tuning';
+import { step, type Axis, type Bounds, type Point } from '../logic/movement';
+import { createRng } from '../logic/rng';
+import type { Roof } from '../logic/world';
+import { SKELETON_MAP } from '../missions/skeleton';
+import {
+  addBackdrop,
+  addBuilding,
+  addStreet,
+  loadArt,
+  makeAnims,
+  missingArt,
+  scrollBackdrop,
+  type ParallaxLayer,
+} from './scenery';
 
 /** Read-only view of the game state, used by the e2e test hook. */
 export interface GameSnapshot {
   player: Point;
+  /** 1 facing right, -1 facing left. */
+  facing: 1 | -1;
   seed: number;
+  /** Left edge of the camera view in the world. */
+  cameraX: number;
+  worldWidth: number;
+  roofs: Roof[];
+  /** Manifest keys whose texture failed to load. */
+  missing: string[];
 }
 
 type Keys = Record<
@@ -14,41 +35,53 @@ type Keys = Record<
   Phaser.Input.Keyboard.Key
 >;
 
-/** Placeholder scene: replace with the real game. */
+const HELI = sheetSpec('heli-side');
+
+/**
+ * The game (roadmap M2 walking skeleton). M2.1: a wide city with the base at
+ * the left end; the camera follows the helicopter (H1). The flight model
+ * (M2.2) and landing rules (M2.3) come next.
+ */
 export class GameScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Rectangle;
+  private heli!: Phaser.GameObjects.Sprite;
   private pos: Point = { x: 0, y: 0 };
+  private facing: 1 | -1 = 1;
   private keys!: Keys;
-  private rng!: Rng;
   private seed = DEFAULT_SEED;
-  private readonly bounds = screenBounds(GAME_WIDTH, GAME_HEIGHT, PLAYER.size);
+  private layers: ParallaxLayer[] = [];
+  private roofs: Roof[] = [];
+  private bounds!: Bounds;
+  private readonly map = SKELETON_MAP;
 
   constructor() {
     super('Game');
   }
 
+  preload(): void {
+    loadArt(this);
+  }
+
   create(): void {
     this.seed = seedFromUrl();
-    this.rng = createRng(this.seed);
-    // A seeded star field shows the RNG in use; same ?seed= gives the same stars.
-    for (let i = 0; i < 60; i++) {
-      this.add.rectangle(
-        this.rng.int(0, GAME_WIDTH - 1),
-        this.rng.int(0, GAME_HEIGHT - 1),
-        1,
-        1,
-        0xffffff,
-        0.6,
-      );
-    }
-    this.pos = { x: GAME_WIDTH / 2, y: GAME_HEIGHT * PLAYER.startY };
-    this.player = this.add.rectangle(
-      this.pos.x,
-      this.pos.y,
-      PLAYER.size,
-      PLAYER.size,
-      PLAYER.color,
-    );
+    const rng = createRng(this.seed);
+    const { theme, width } = this.map;
+
+    this.layers = addBackdrop(this, theme);
+    addStreet(this, theme, width);
+    const base = addBuilding(this, theme, this.map.base, rng, true);
+    this.roofs = [base, ...this.map.buildings.map((b) => addBuilding(this, theme, b, rng))];
+
+    makeAnims(this);
+    const halfW = HELI.frameWidth / 2;
+    const halfH = HELI.frameHeight / 2;
+    this.bounds = { minX: halfW, maxX: width - halfW, minY: halfH, maxY: SCENERY.groundY - halfH };
+    this.pos = { x: (base.left + base.right) / 2, y: base.y - halfH - PLAYER.startAbovePad };
+    this.heli = this.add.sprite(this.pos.x, this.pos.y, HELI.key).play(HELI.key);
+
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, width, GAME_HEIGHT);
+    cam.startFollow(this.heli, true, CAMERA.lerp, CAMERA.lerp);
+    this.lookAhead();
 
     const kb = this.input.keyboard;
     if (!kb) throw new Error('keyboard input is not available');
@@ -65,12 +98,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(_time: number, deltaMs: number): void {
-    this.pos = step(this.pos, this.readAxis(), deltaMs / 1000, PLAYER.speed, this.bounds);
-    this.player.setPosition(this.pos.x, this.pos.y);
+    const axis = this.readAxis();
+    this.pos = step(this.pos, axis, deltaMs / 1000, PLAYER.speed, this.bounds);
+    if (axis.x !== 0 && axis.x !== this.facing) {
+      this.facing = axis.x;
+      this.heli.setFlipX(this.facing < 0);
+      this.lookAhead();
+    }
+    this.heli.setPosition(this.pos.x, this.pos.y);
+    scrollBackdrop(this.layers, this.cameras.main.scrollX);
   }
 
   snapshot(): GameSnapshot {
-    return { player: { ...this.pos }, seed: this.seed };
+    return {
+      player: { ...this.pos },
+      facing: this.facing,
+      seed: this.seed,
+      cameraX: this.cameras.main.scrollX,
+      worldWidth: this.map.width,
+      roofs: this.roofs.map((r) => ({ ...r })),
+      missing: missingArt(this),
+    };
+  }
+
+  /** Keeps more of the view ahead of the helicopter than behind it. */
+  private lookAhead(): void {
+    this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.facing, 0);
   }
 
   private readAxis(): Axis {

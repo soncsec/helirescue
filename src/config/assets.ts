@@ -231,3 +231,10 @@ export const TILE = {
   rubble: 14,
   roofDamaged: 15,
 } as const;
+
+/** The manifest entry for a sprite sheet; throws if the key is unknown. */
+export function sheetSpec(key: string): SheetSpec {
+  const s = SHEETS.find((x) => x.key === key);
+  if (!s) throw new Error(`${key} is missing from the art manifest`);
+  return s;
+}
