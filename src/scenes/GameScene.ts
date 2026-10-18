@@ -1,8 +1,27 @@
 import Phaser from 'phaser';
 import { sheetSpec } from '../config/assets';
-import { CAMERA, DEFAULT_SEED, FLIGHT, GAME_HEIGHT, PLAYER, SCENERY } from '../config/tuning';
-import { fly, hovering, type FlightState } from '../logic/flight';
-import type { Axis, Bounds, Point } from '../logic/movement';
+import {
+  CAMERA,
+  DEFAULT_SEED,
+  FLIGHT,
+  GAME_HEIGHT,
+  HEALTH_BAR,
+  HELI_SHAPE,
+  LANDING,
+  LANDING_FX,
+  PLAYER,
+  SCENERY,
+} from '../config/tuning';
+import type { Axis, Point } from '../logic/movement';
+import {
+  newHeli,
+  updateHeli,
+  type Heli,
+  type HeliEvent,
+  type HeliMode,
+  type HeliRules,
+  type HeliWorld,
+} from '../logic/landing';
 import { createRng } from '../logic/rng';
 import type { Roof } from '../logic/world';
 import { SKELETON_MAP } from '../missions/skeleton';
@@ -25,6 +44,12 @@ export interface GameSnapshot {
   tilt: number;
   /** 1 facing right, -1 facing left. */
   facing: 1 | -1;
+  mode: HeliMode;
+  health: number;
+  /** The roof (or street) it is landed on, or null. */
+  on: Roof | null;
+  /** Every event so far except 'none', oldest first (at most 50). */
+  events: HeliEvent['kind'][];
   seed: number;
   /** Left edge of the camera view in the world. */
   cameraX: number;
@@ -39,22 +64,27 @@ type Keys = Record<
   Phaser.Input.Keyboard.Key
 >;
 
-const HELI = sheetSpec('heli-side');
+const SIDE = sheetSpec('heli-side');
+const FRONT = sheetSpec('heli-front');
+const RULES: HeliRules = { flight: FLIGHT, landing: LANDING, shape: HELI_SHAPE };
+const MAX_EVENTS = 50;
 
 /**
  * The game (roadmap M2 walking skeleton): a wide city with the base at the
- * left end, the camera following the helicopter (H1) and arcade flight (H2).
- * Landing rules (M2.3) come next.
+ * left end, the camera following the helicopter (H1), arcade flight (H2) and
+ * landing rules (H3).
  */
 export class GameScene extends Phaser.Scene {
-  private heli!: Phaser.GameObjects.Sprite;
-  private flight: FlightState = hovering(0, 0);
-  private facing: 1 | -1 = 1;
+  private sprite!: Phaser.GameObjects.Sprite;
+  private boom!: Phaser.GameObjects.Sprite;
+  private healthFill!: Phaser.GameObjects.Rectangle;
+  private heli!: Heli;
+  private world!: HeliWorld;
+  private heliEvents: HeliEvent['kind'][] = [];
   private keys!: Keys;
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
-  private bounds!: Bounds;
   private readonly map = SKELETON_MAP;
 
   constructor() {
@@ -67,24 +97,46 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.seed = seedFromUrl();
+    this.heliEvents = [];
     const rng = createRng(this.seed);
     const { theme, width } = this.map;
+    const { groundY } = SCENERY;
 
     this.layers = addBackdrop(this, theme);
     addStreet(this, theme, width);
     const base = addBuilding(this, theme, this.map.base, rng, true);
-    this.roofs = [base, ...this.map.buildings.map((b) => addBuilding(this, theme, b, rng))];
+    const buildings = this.map.buildings.map((b) => addBuilding(this, theme, b, rng));
+    this.roofs = [base, ...buildings];
+
+    const spawn = {
+      x: (base.left + base.right) / 2,
+      y: base.y - HELI_SHAPE.bottom - PLAYER.startAbovePad,
+    };
+    const halfW = SIDE.frameWidth / 2;
+    this.world = {
+      surfaces: [...this.roofs, { left: 0, right: width, y: groundY, base: false }],
+      buildings: this.roofs,
+      groundY,
+      people: [],
+      bounds: {
+        minX: halfW,
+        maxX: width - halfW,
+        minY: SIDE.frameHeight / 2,
+        maxY: groundY - HELI_SHAPE.bottom + LANDING_FX.groundSlack,
+      },
+      spawn,
+    };
+    this.heli = newHeli(spawn.x, spawn.y, LANDING);
 
     makeAnims(this);
-    const halfW = HELI.frameWidth / 2;
-    const halfH = HELI.frameHeight / 2;
-    this.bounds = { minX: halfW, maxX: width - halfW, minY: halfH, maxY: SCENERY.groundY - halfH };
-    this.flight = hovering((base.left + base.right) / 2, base.y - halfH - PLAYER.startAbovePad);
-    this.heli = this.add.sprite(this.flight.x, this.flight.y, HELI.key).play(HELI.key);
+    this.sprite = this.add.sprite(spawn.x, spawn.y, SIDE.key).play(SIDE.key);
+    this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
+    this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
+    this.addHealthBar();
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, width, GAME_HEIGHT);
-    cam.startFollow(this.heli, true, CAMERA.lerp, CAMERA.lerp);
+    cam.startFollow(this.sprite, true, CAMERA.lerp, CAMERA.lerp);
     this.lookAhead();
 
     const kb = this.input.keyboard;
@@ -103,24 +155,26 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, deltaMs: number): void {
     const axis = this.readAxis();
-    this.flight = fly(this.flight, axis, deltaMs / 1000, FLIGHT, this.bounds);
-    if (axis.x !== 0 && axis.x !== this.facing) {
-      this.facing = axis.x;
-      this.heli.setFlipX(this.facing < 0);
-      this.lookAhead();
-    }
-    const f = this.flight;
-    this.heli.setPosition(f.x, f.y).setAngle(f.tilt);
-    this.heli.anims.timeScale = axis.y < 0 ? PLAYER.rotorClimb : PLAYER.rotorIdle;
+    const before = this.heli;
+    const { heli, event } = updateHeli(before, axis, deltaMs / 1000, this.world, RULES);
+    this.heli = heli;
+    if (event.kind !== 'none') this.onEvent(event);
+    if (heli.facing !== before.facing) this.lookAhead();
+    this.draw(axis);
     scrollBackdrop(this.layers, this.cameras.main.scrollX);
   }
 
   snapshot(): GameSnapshot {
+    const { flight: f } = this.heli;
     return {
-      player: { x: this.flight.x, y: this.flight.y },
-      velocity: { x: this.flight.vx, y: this.flight.vy },
-      tilt: this.flight.tilt,
-      facing: this.facing,
+      player: { x: f.x, y: f.y },
+      velocity: { x: f.vx, y: f.vy },
+      tilt: f.tilt,
+      facing: this.heli.facing,
+      mode: this.heli.mode,
+      health: this.heli.health,
+      on: this.heli.on ? { ...this.heli.on } : null,
+      events: [...this.heliEvents],
       seed: this.seed,
       cameraX: this.cameras.main.scrollX,
       worldWidth: this.map.width,
@@ -129,9 +183,60 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  private onEvent(event: HeliEvent): void {
+    this.heliEvents.push(event.kind);
+    if (this.heliEvents.length > MAX_EVENTS) this.heliEvents.shift();
+    const { flight: f } = this.heli;
+    if (event.kind === 'hard-landing') {
+      this.cameras.main.shake(LANDING_FX.shakeMs, LANDING_FX.shakeStrength);
+    } else if (event.kind === 'crashed') {
+      this.cameras.main.shake(LANDING_FX.shakeMs * 2, LANDING_FX.shakeStrength * 2);
+      this.boom
+        .setPosition(f.x, f.y + HELI_SHAPE.bottom)
+        .setOrigin(0.5, 1)
+        .setVisible(true)
+        .play({ key: 'explosion', repeat: 0 });
+    }
+  }
+
+  /** Shows the side view in flight, the front view when landed, nothing after a crash. */
+  private draw(axis: Axis): void {
+    const h = this.heli;
+    const s = this.sprite;
+    s.setVisible(h.mode !== 'crashed');
+    const key = h.mode === 'landed' ? FRONT.key : SIDE.key;
+    if (s.anims.currentAnim?.key !== key) s.play(key);
+    s.setPosition(h.flight.x, h.flight.y)
+      .setAngle(h.mode === 'landed' ? 0 : h.flight.tilt)
+      .setFlipX(h.mode !== 'landed' && h.facing < 0);
+    s.anims.timeScale =
+      h.mode === 'landed'
+        ? LANDING_FX.rotorLanded
+        : axis.y < 0
+          ? PLAYER.rotorClimb
+          : PLAYER.rotorIdle;
+    this.healthFill.width = (HEALTH_BAR.width * h.health) / LANDING.maxHealth;
+    this.healthFill.fillColor =
+      h.health > HEALTH_BAR.lowAt ? HEALTH_BAR.colour : HEALTH_BAR.lowColour;
+  }
+
+  /** A small health bar in the top-left corner (the full HUD comes in M2.4). */
+  private addHealthBar(): void {
+    const B = HEALTH_BAR;
+    this.add
+      .rectangle(B.x - 1, B.y - 1, B.width + 2, B.height + 2, B.frame)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+    this.add.rectangle(B.x, B.y, B.width, B.height, B.empty).setOrigin(0, 0).setScrollFactor(0);
+    this.healthFill = this.add
+      .rectangle(B.x, B.y, B.width, B.height, B.colour)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+  }
+
   /** Keeps more of the view ahead of the helicopter than behind it. */
   private lookAhead(): void {
-    this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.facing, 0);
+    this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.heli.facing, 0);
   }
 
   private readAxis(): Axis {

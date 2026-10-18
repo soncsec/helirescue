@@ -61,6 +61,11 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
   expect(start.player.y).toBeLessThan(base?.y ?? -Infinity);
   expect(start.worldWidth).toBeGreaterThan(960);
 
+  // Climb above the rooftops first, so the buildings don't block the way.
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(70);
+  await page.keyboard.up('ArrowUp');
+
   await page.keyboard.down('ArrowRight');
   await expect.poll(async () => (await snapshot(page)).tilt, MOVE).toBeGreaterThan(0);
   await expect.poll(async () => (await snapshot(page)).cameraX, MOVE).toBeGreaterThan(100);
@@ -75,11 +80,12 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
   await expect.poll(async () => (await snapshot(page)).tilt, MOVE).toBe(0);
   await expect.poll(async () => Math.abs((await snapshot(page)).velocity.x), MOVE).toBeLessThan(5);
 
+  // Up climbs again (it has been sinking slowly while drifting).
   const before = await snapshot(page);
   await page.keyboard.down('ArrowUp');
   await expect
     .poll(async () => (await snapshot(page)).player.y, MOVE)
-    .toBeLessThan(before.player.y - 30);
+    .toBeLessThan(before.player.y - 10);
   await page.keyboard.up('ArrowUp');
 
   await page.keyboard.down('ArrowLeft');
@@ -93,15 +99,47 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
   expect(left.velocity.x).toBeLessThanOrEqual(0);
 });
 
-test('with no input the helicopter sinks slowly', async ({ page }) => {
-  test.slow(); // several MOVE waits in a row
+test('with no input it sinks gently onto the base pad and lands safely', async ({ page }) => {
   await openGame(page);
   const start = await snapshot(page);
-  await page.waitForTimeout(1500);
-  const later = await snapshot(page);
-  expect(later.player.y).toBeGreaterThan(start.player.y);
-  expect(later.player.y - start.player.y).toBeLessThan(40);
-  expect(later.player.x).toBe(start.player.x);
+  expect(start.mode).not.toBe('landed');
+  await expect.poll(async () => (await snapshot(page)).mode, MOVE).toBe('landed');
+  const landed = await snapshot(page);
+  expect(landed.on?.base).toBe(true);
+  expect(landed.health).toBe(100);
+  expect(landed.events).toEqual(['landed']);
+  expect(landed.player.x).toBe(start.player.x);
+});
+
+test('up takes off; diving onto a roof is a hard landing that costs health', async ({ page }) => {
+  test.slow();
+  await openGame(page);
+  await expect.poll(async () => (await snapshot(page)).mode, MOVE).toBe('landed');
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await snapshot(page)).events, MOVE).toContain('took-off');
+  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(60);
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.down('ArrowDown');
+  await expect.poll(async () => (await snapshot(page)).mode, MOVE).toBe('landed');
+  await page.keyboard.up('ArrowDown');
+  const after = await snapshot(page);
+  expect(after.events).toContain('hard-landing');
+  expect(after.health).toBeLessThan(100);
+  expect(after.health).toBeGreaterThan(0);
+  expect(after.on?.base).toBe(true);
+});
+
+test('flying low into a building stops at its wall', async ({ page }) => {
+  test.slow();
+  await openGame(page);
+  const firstBuilding = (await snapshot(page)).roofs[1];
+  if (!firstBuilding) throw new Error('no buildings');
+  await page.keyboard.down('ArrowRight');
+  await expect.poll(async () => (await snapshot(page)).events, MOVE).toContain('bumped');
+  await page.keyboard.up('ArrowRight');
+  const s = await snapshot(page);
+  expect(s.player.x).toBeLessThan(firstBuilding.left);
+  expect(s.health).toBe(100);
 });
 
 test('?seed= in the URL sets the random seed', async ({ page }) => {
