@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import './style.css';
 import { GAME_HEIGHT, GAME_WIDTH } from './config/tuning';
 import { integerZoom } from './logic/scaling';
+import { startScene } from './logic/startScene';
+import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
 
 const zoomForWindow = (): number =>
@@ -20,7 +22,9 @@ export const game = new Phaser.Game({
     mode: Phaser.Scale.NONE,
     zoom: zoomForWindow(),
   },
-  scene: [GameScene],
+  // ?scene=art opens the art test (roadmap M1); Phaser starts the first scene listed.
+  scene:
+    startScene(window.location.search) === 'Art' ? [ArtScene, GameScene] : [GameScene, ArtScene],
 });
 
 window.addEventListener('resize', () => {

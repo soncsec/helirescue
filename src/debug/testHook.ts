@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { ArtScene, ArtSnapshot } from '../scenes/ArtScene';
 import type { GameScene, GameSnapshot } from '../scenes/GameScene';
 
 /**
@@ -10,6 +11,8 @@ export interface TestHook {
   /** The key of the scene that is running, or null while loading. */
   scene(): string | null;
   snapshot(): GameSnapshot | null;
+  /** The art test's state, while it is running. */
+  art(): ArtSnapshot | null;
 }
 
 declare global {
@@ -24,6 +27,10 @@ export function installTestHook(game: Phaser.Game): void {
     snapshot: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
       return s && game.scene.isActive('Game') ? s.snapshot() : null;
+    },
+    art: () => {
+      const s = game.scene.getScene('Art') as ArtScene | null;
+      return s && game.scene.isActive('Art') ? s.snapshot() : null;
     },
   };
 }
