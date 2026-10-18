@@ -5,6 +5,7 @@ import { integerZoom } from './logic/scaling';
 import { startScene } from './logic/startScene';
 import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
+import { HudScene } from './scenes/HudScene';
 
 const zoomForWindow = (): number =>
   integerZoom(window.innerWidth, window.innerHeight, GAME_WIDTH, GAME_HEIGHT);
@@ -24,7 +25,9 @@ export const game = new Phaser.Game({
   },
   // ?scene=art opens the art viewer; Phaser starts the first scene listed.
   scene:
-    startScene(window.location.search) === 'Art' ? [ArtScene, GameScene] : [GameScene, ArtScene],
+    startScene(window.location.search) === 'Art'
+      ? [ArtScene, GameScene, HudScene]
+      : [GameScene, HudScene, ArtScene],
 });
 
 window.addEventListener('resize', () => {

@@ -1,16 +1,20 @@
 import Phaser from 'phaser';
 import { sheetSpec } from '../config/assets';
 import {
+  BASE_ART,
   CAMERA,
   DEFAULT_SEED,
   FLIGHT,
   GAME_HEIGHT,
-  HEALTH_BAR,
   HELI_SHAPE,
+  HUD,
   LANDING,
   LANDING_FX,
+  PEOPLE,
   PLAYER,
   SCENERY,
+  SCORING,
+  WORLD_LIMITS,
 } from '../config/tuning';
 import type { Axis, Point } from '../logic/movement';
 import {
@@ -22,8 +26,18 @@ import {
   type HeliRules,
   type HeliWorld,
 } from '../logic/landing';
+import {
+  blockers,
+  tally,
+  updatePeople,
+  visible,
+  waitingOn,
+  type Person,
+  type PeopleEvent,
+} from '../logic/people';
 import { createRng } from '../logic/rng';
-import type { Roof } from '../logic/world';
+import { rescueScore } from '../logic/score';
+import { roofOf, roofUnder, type Roof } from '../logic/world';
 import { SKELETON_MAP } from '../missions/skeleton';
 import {
   addBackdrop,
@@ -35,6 +49,7 @@ import {
   scrollBackdrop,
   type ParallaxLayer,
 } from './scenery';
+import type { HudState } from './HudScene';
 
 /** Read-only view of the game state, used by the e2e test hook. */
 export interface GameSnapshot {
@@ -48,8 +63,10 @@ export interface GameSnapshot {
   health: number;
   /** The roof (or street) it is landed on, or null. */
   on: Roof | null;
-  /** Every event so far except 'none', oldest first (at most 50). */
-  events: HeliEvent['kind'][];
+  /** Every helicopter and people event so far, oldest first (at most 50). */
+  events: (HeliEvent['kind'] | PeopleEvent['kind'])[];
+  people: { id: number; mode: Person['mode']; x: number; y: number }[];
+  hud: HudState;
   seed: number;
   /** Left edge of the camera view in the world. */
   cameraX: number;
@@ -65,22 +82,26 @@ type Keys = Record<
 >;
 
 const SIDE = sheetSpec('heli-side');
+const CIVILIANS = ['civilian-blue', 'civilian-green', 'civilian-yellow'] as const;
 const FRONT = sheetSpec('heli-front');
 const RULES: HeliRules = { flight: FLIGHT, landing: LANDING, shape: HELI_SHAPE };
 const MAX_EVENTS = 50;
 
 /**
  * The game (roadmap M2 walking skeleton): a wide city with the base at the
- * left end, the camera following the helicopter (H1), arcade flight (H2) and
- * landing rules (H3).
+ * left end, the camera following the helicopter (H1), arcade flight (H2),
+ * landing rules and the rescue loop (H3): people board on their roof and are
+ * saved when unloaded at base. The HUD runs in its own scene (HudScene).
  */
 export class GameScene extends Phaser.Scene {
   private sprite!: Phaser.GameObjects.Sprite;
   private boom!: Phaser.GameObjects.Sprite;
-  private healthFill!: Phaser.GameObjects.Rectangle;
   private heli!: Heli;
   private world!: HeliWorld;
-  private heliEvents: HeliEvent['kind'][] = [];
+  private people: Person[] = [];
+  private personSprites: Phaser.GameObjects.Sprite[] = [];
+  private hutDoorX = 0;
+  private heliEvents: GameSnapshot['events'] = [];
   private keys!: Keys;
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
@@ -104,9 +125,25 @@ export class GameScene extends Phaser.Scene {
 
     this.layers = addBackdrop(this, theme);
     addStreet(this, theme, width);
-    const base = addBuilding(this, theme, this.map.base, rng, true);
+    const base = roofOf(this.map.base, SCENERY, true);
     const buildings = this.map.buildings.map((b) => addBuilding(this, theme, b, rng));
     this.roofs = [base, ...buildings];
+    makeAnims(this);
+    this.add.sprite(base.left, groundY, 'base').setOrigin(0, 1).play('base');
+    this.hutDoorX = base.left + BASE_ART.hutDoorX;
+
+    this.people = this.map.people.map((p, id) => {
+      const roof = roofUnder(this.map, p.x, WORLD_LIMITS);
+      if (!roof) throw new Error(`person ${id} is not on a roof`);
+      return waitingOn(id, p.x, roof);
+    });
+    this.personSprites = this.people.map(
+      (p) =>
+        this.add
+          .sprite(p.x, p.y, CIVILIANS[p.id % CIVILIANS.length] ?? 'civilian-blue', 0)
+          .setOrigin(0.5, 1)
+          .setDepth(1), // in front of the helicopter
+    );
 
     const spawn = {
       x: (base.left + base.right) / 2,
@@ -128,11 +165,10 @@ export class GameScene extends Phaser.Scene {
     };
     this.heli = newHeli(spawn.x, spawn.y, LANDING);
 
-    makeAnims(this);
     this.sprite = this.add.sprite(spawn.x, spawn.y, SIDE.key).play(SIDE.key);
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
-    this.addHealthBar();
+    this.scene.launch('Hud', { read: (): HudState | null => this.hudState() });
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, width, GAME_HEIGHT);
@@ -156,9 +192,15 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     const axis = this.readAxis();
     const before = this.heli;
-    const { heli, event } = updateHeli(before, axis, deltaMs / 1000, this.world, RULES);
+    const dt = deltaMs / 1000;
+    this.world = { ...this.world, people: blockers(this.people, PEOPLE) };
+    const { heli, event } = updateHeli(before, axis, dt, this.world, RULES);
     this.heli = heli;
     if (event.kind !== 'none') this.onEvent(event);
+    const moved = updatePeople(this.people, heli, dt, this.hutDoorX, PEOPLE);
+    this.people = moved.people;
+    for (const e of moved.events) this.onPeopleEvent(e);
+    this.drawPeople();
     if (heli.facing !== before.facing) this.lookAhead();
     this.draw(axis);
     scrollBackdrop(this.layers, this.cameras.main.scrollX);
@@ -175,6 +217,8 @@ export class GameScene extends Phaser.Scene {
       health: this.heli.health,
       on: this.heli.on ? { ...this.heli.on } : null,
       events: [...this.heliEvents],
+      people: this.people.map((p) => ({ id: p.id, mode: p.mode, x: p.x, y: p.y })),
+      hud: this.hudState(),
       seed: this.seed,
       cameraX: this.cameras.main.scrollX,
       worldWidth: this.map.width,
@@ -183,9 +227,62 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  private onEvent(event: HeliEvent): void {
-    this.heliEvents.push(event.kind);
+  hudState(): HudState {
+    const t = tally(this.people);
+    return {
+      health: this.heli.health,
+      maxHealth: LANDING.maxHealth,
+      saved: t.saved,
+      total: t.total,
+      aboard: t.aboard,
+      capacity: PEOPLE.capacity,
+      score: rescueScore(t.saved, SCORING),
+    };
+  }
+
+  private log(kind: GameSnapshot['events'][number]): void {
+    this.heliEvents.push(kind);
     if (this.heliEvents.length > MAX_EVENTS) this.heliEvents.shift();
+  }
+
+  private onPeopleEvent(event: PeopleEvent): void {
+    this.log(event.kind);
+    if (event.kind !== 'saved') return;
+    const base = this.roofs[0];
+    const popup = this.add
+      .text(this.hutDoorX, (base?.y ?? 0) - PEOPLE.height, `+${SCORING.perPerson}`, {
+        fontFamily: HUD.font,
+        fontSize: `${HUD.fontSize}px`,
+        color: HUD.accent,
+      })
+      .setOrigin(0.5, 1)
+      .setShadow(1, 1, HUD.shadow, 0, false, true);
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - HUD.popupRise,
+      alpha: 0,
+      duration: HUD.popupMs,
+      onComplete: () => popup.destroy(),
+    });
+  }
+
+  /** Walks, stands or hides each person's sprite to match their state. */
+  private drawPeople(): void {
+    this.people.forEach((p, i) => {
+      const s = this.personSprites[i];
+      if (!s) return;
+      s.setVisible(visible(p))
+        .setPosition(p.x, p.y)
+        .setFlipX(p.facing < 0);
+      const key = s.texture.key;
+      const walking = p.mode === 'running' || (p.mode === 'unloading' && p.timer >= 0);
+      if (walking && !s.anims.isPlaying) s.play(key);
+      if (!walking && s.anims.isPlaying) s.stop().setFrame(0);
+    });
+  }
+
+  private onEvent(event: HeliEvent): void {
+    this.log(event.kind);
     const { flight: f } = this.heli;
     if (event.kind === 'hard-landing') {
       this.cameras.main.shake(LANDING_FX.shakeMs, LANDING_FX.shakeStrength);
@@ -215,23 +312,6 @@ export class GameScene extends Phaser.Scene {
         : axis.y < 0
           ? PLAYER.rotorClimb
           : PLAYER.rotorIdle;
-    this.healthFill.width = (HEALTH_BAR.width * h.health) / LANDING.maxHealth;
-    this.healthFill.fillColor =
-      h.health > HEALTH_BAR.lowAt ? HEALTH_BAR.colour : HEALTH_BAR.lowColour;
-  }
-
-  /** A small health bar in the top-left corner (the full HUD comes in M2.4). */
-  private addHealthBar(): void {
-    const B = HEALTH_BAR;
-    this.add
-      .rectangle(B.x - 1, B.y - 1, B.width + 2, B.height + 2, B.frame)
-      .setOrigin(0, 0)
-      .setScrollFactor(0);
-    this.add.rectangle(B.x, B.y, B.width, B.height, B.empty).setOrigin(0, 0).setScrollFactor(0);
-    this.healthFill = this.add
-      .rectangle(B.x, B.y, B.width, B.height, B.colour)
-      .setOrigin(0, 0)
-      .setScrollFactor(0);
   }
 
   /** Keeps more of the view ahead of the helicopter than behind it. */

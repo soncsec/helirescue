@@ -2,13 +2,15 @@ import type { WorldMap } from '../logic/world';
 
 /**
  * Walking-skeleton map (roadmap M2): three screens of night city with the base
- * at the left end. The real mission format comes in M5 (H4).
+ * at the left end, and one person to rescue. The real mission format comes
+ * in M5 (H4).
  * Building x is in pixels; width and height are in 16-pixel tiles.
  */
 export const SKELETON_MAP: WorldMap = {
   width: 1440,
   theme: 'night',
-  base: { x: 16, width: 8, height: 2, damage: 0, helipad: true },
+  // Drawn with the base sprite (160x96, roof 48 px up), not tiles.
+  base: { x: 16, width: 10, height: 3, damage: 0, helipad: true },
   buildings: [
     { x: 200, width: 5, height: 6, damage: 0.2, helipad: false },
     { x: 330, width: 7, height: 8, damage: 0.1, helipad: true },
@@ -19,4 +21,6 @@ export const SKELETON_MAP: WorldMap = {
     { x: 1170, width: 5, height: 4, damage: 0.5, helipad: false },
     { x: 1280, width: 8, height: 8, damage: 0.2, helipad: true },
   ],
+  // One person, near the far edge of the helipad roof at 980..1124.
+  people: [{ x: 1108 }],
 };

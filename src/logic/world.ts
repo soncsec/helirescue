@@ -18,6 +18,8 @@ export interface WorldMap {
   /** The base the helicopter starts from and unloads at, drawn like a building. */
   base: PlacedBuilding;
   buildings: readonly PlacedBuilding[];
+  /** People waiting to be rescued, by x position; each stands on the building roof below. */
+  people: readonly { x: number }[];
 }
 
 export interface WorldLimits {
@@ -29,6 +31,8 @@ export interface WorldLimits {
   minWidth: number;
   /** Clear sky to keep above the tallest roof, in pixels. */
   minSky: number;
+  /** People stand at least this far in from a roof edge. */
+  personMargin: number;
 }
 
 /** A flat roof surface: where the helicopter can land and people wait. */
@@ -63,9 +67,16 @@ export function roofs(world: WorldMap, limits: WorldLimits): Roof[] {
   ];
 }
 
+/** The building roof (not the base) that x is over, or null. */
+export function roofUnder(world: WorldMap, x: number, limits: WorldLimits): Roof | null {
+  const b = world.buildings.find((b) => x >= b.x && x <= b.x + b.width * limits.tile);
+  return b ? roofOf(b, limits) : null;
+}
+
 /**
  * Lists everything wrong with a map: too narrow, buildings outside the level,
- * overlapping each other or the base, or too tall to fly over.
+ * overlapping each other or the base, too tall to fly over, or people not
+ * standing on a building roof.
  * Returns an empty list when the map is valid.
  */
 export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
@@ -93,5 +104,12 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
       problems.push(`${prev.name} overlaps ${cur.name}`);
     }
   }
+  world.people.forEach((p, i) => {
+    const r = roofUnder(world, p.x, limits);
+    if (!r) problems.push(`person ${i} is not on a building roof`);
+    else if (p.x < r.left + limits.personMargin || p.x > r.right - limits.personMargin) {
+      problems.push(`person ${i} is too close to the roof edge`);
+    }
+  });
   return problems;
 }
