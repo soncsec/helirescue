@@ -2,6 +2,7 @@
 
 > **Status:** APPROVED by owner 2026-10-18.
 > Every milestone ends with something playable on staging. Each task is one small PR. Tasks in M3–M6 are split further when their milestone starts.
+> Revised 2026-10-18 after the owner's PM review: M3 builds the mission frame (people groups, mission end, lives, title) before weapons and enemies; phones get fit-to-screen scaling and WebKit tests; one saved-data key; Retry on game over; the mission bonus follows the share saved.
 
 ## Progress
 
@@ -9,7 +10,7 @@
 |---|---|
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
-| M2 Walking skeleton (to production) | In progress: M2.5 first release |
+| M2 Walking skeleton (to production) | In progress: M2.5 (game live; portal release pending) |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
@@ -27,6 +28,7 @@
 | 6 | Performance in a wide world with many bullets | Pooling, no updates off screen, automated frame-rate check | M3, M6 |
 | 7 | Parallel sessions on this machine and the portal | Dedicated ports; separate portal clone; stop only our own processes | M0 |
 | 8 | Supply chain | Only the template's dependencies; exact versions at least two weeks old; audits | Every PR |
+| 9 | Phones: small screens, touch controls for a flight game, WebKit differences | Fit-to-screen scaling (H8); touch tests in a mobile viewport; WebKit in the e2e browsers | M2.6, M2.7 |
 
 ---
 
@@ -66,8 +68,9 @@
 - [x] M2.3 Landing rules: safe landing, hard landing, no landing on people (H3)
 - [x] M2.4 One person runs from the roof edge, boards, and is unloaded at base; score and HUD; a proper base drawn by Claude (hangar, flag, large H pad)
 - [ ] M2.5 First production release (keyboard play) and a live portal card, as soon as it is playable (owner, 2026-10-18): HUD font, a "touch controls coming soon" note on phones, card image; ZAP before and after
-- [ ] M2.6 Touch controls for phones and tablets: on-screen D-pad and buttons, landscape only, scaling for small screens (scope change 2026-10-18)
-- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport; release with the owner's approval
+- [ ] M2.6 Touch controls for phones and tablets: on-screen D-pad and Fire, Bomb and Turn buttons, landscape only with a "turn your phone sideways" message, fit-to-screen scaling on touch devices (H8); first phone performance measurement (scope change 2026-10-18)
+- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval
+  - [x] WebKit (Safari, iPhone, iPad) added to the e2e browsers (PR #11, 2026-10-18)
 
 **Acceptance criteria:** each step works in the running game on staging and production; unit tests cover flight and landing rules; ZAP shows no high-risk alerts.
 
@@ -75,21 +78,23 @@
 
 **Demonstrable result:** a complete first mission from takeoff to the result screen.
 
-- [ ] M3.1 Several buildings with groups of people; carrying limit
-- [ ] M3.2 Forward gun and bombs, with pooled bullets and effects
-- [ ] M3.3 Ground soldiers who shoot at people; anti-aircraft guns that shoot at the helicopter
-- [ ] M3.4 Health bar, crash, 3 helicopters, game over
-- [ ] M3.5 Mission end when everyone is saved or dead; result screen with bonus; high score
-- [ ] M3.6 Title screen (with the CC-BY art credit) and pause
+The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a winnable mission before any enemy exists (reordered 2026-10-18).
 
-**Acceptance criteria:** mission 1 can be won or lost; scoring rules are unit tested; an e2e test plays a scripted rescue; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test.
+- [ ] M3.1 Several buildings with groups of people; carrying limit
+- [ ] M3.2 Mission end when everyone is saved or lost; result screen with the bonus scaled by the share saved plus a perfect-rescue bonus; high score in the saved-data key (H9)
+- [ ] M3.3 3 helicopters, game over, and Retry of the current mission
+- [ ] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
+- [ ] M3.5 Turn key and button (confirm the turning decision first), forward gun and bombs, with pooled bullets and effects
+- [ ] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
+
+**Acceptance criteria:** mission 1 can be won or lost; scoring and saved-data rules are unit tested; an e2e test plays a scripted rescue on desktop and with touch; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test, once without enemies (after M3.4) and once with.
 
 ## M4 — Sound
 
 **Demonstrable result:** rotor, gun, bomb, explosion, boarding and UI sounds plus a music loop; M mutes.
 
 - [ ] M4.1 Sources listed for the owner's approval; generated effects where they fit
-- [ ] M4.2 Sound starts on the first key press; mute
+- [ ] M4.2 Sound starts on the first key press or tap; mute, remembered in the saved-data key (H9)
 
 **Acceptance criteria:** every sound plays in Chrome and Firefox; every licence is recorded; audio under 3 MB.
 
@@ -100,7 +105,7 @@
 - [ ] M5.1 Mission data format and `difficulty()` with tested limits (H4)
 - [ ] M5.2 Tanks, and enemy aircraft from mission 2
 - [ ] M5.3 A background and layout for each mission
-- [ ] M5.4 Progress through missions; final victory screen
+- [ ] M5.4 Progress through missions; start from the furthest mission reached (H9); final victory screen
 
 **Acceptance criteria:** all 5 missions can be completed; difficulty limits enforced by tests; an e2e test loads each mission; the owner approves the difficulty curve.
 
@@ -109,8 +114,8 @@
 **Demonstrable result:** v1.0 live on production with its card shown in the portal.
 
 - [ ] M6.1 Balance pass from the owner's play-test notes
-- [ ] M6.2 Portal card image (256×192 gameplay shot) and status `live`, by portal PR
+- [ ] M6.2 Refresh the portal card image (256×192 gameplay shot) for v1.0, by portal PR (the card went `live` in M2.5)
 - [ ] M6.3 Full security checks: CodeQL, npm audit, Gitleaks, ZAP on staging and production
 - [ ] M6.4 Production release with the owner's approval; docs updated
 
-**Acceptance criteria:** every item in PROJECT.md section 4 (definition of done) is met and checked on the live site.
+**Acceptance criteria:** every item in PROJECT.md section 4 (definition of done) is met and checked on the live site, on a desktop and on a phone.

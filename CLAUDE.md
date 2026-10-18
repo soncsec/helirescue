@@ -62,7 +62,7 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 - No runtime requests to third-party hosts. Everything is bundled and served from our own origin.
 - Pin exact dependency versions, at least two weeks old, and commit the lockfile.
 - Run static checks (CodeQL, ESLint, `npm audit`, Gitleaks) and a dynamic check (OWASP ZAP baseline) before any deployment or configuration change, and report the results.
-- No personal data is collected. localStorage holds only the high score.
+- No personal data is collected. localStorage holds one key (`helirescue`) with the high score, the mute setting and the furthest mission reached (ARCHITECTURE.md H9), nothing else.
 - Never put credentials in code, the chat, or CI logs; use GitHub Actions secrets.
 
 ## Environment
@@ -82,7 +82,7 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 ## Assets
 
 - Source pack: `legacy/` (Ansimuz Legacy Collection, CC0). Copy only the files used into `public/assets/` and list them in `CREDITS.md`.
-- Keep native pixel resolution. Render with `pixelArt: true` and integer scaling.
+- Keep native pixel resolution. Render with `pixelArt: true`; whole-number scaling on desktop, fit-to-screen on touch devices (ARCHITECTURE.md H8).
 
 ## Releasing
 
