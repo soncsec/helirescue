@@ -84,7 +84,7 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 - [ ] M3.2 Mission end when everyone is saved or lost; result screen with the bonus scaled by the share saved plus a perfect-rescue bonus; high score in the saved-data key (H9)
 - [ ] M3.3 3 helicopters, game over, and Retry of the current mission
 - [ ] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
-- [ ] M3.5 Turn key and button (confirm the turning decision first), forward gun and bombs, with pooled bullets and effects
+- [ ] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
 - [ ] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
 
 **Acceptance criteria:** mission 1 can be won or lost; scoring and saved-data rules are unit tested; an e2e test plays a scripted rescue on desktop and with touch; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test, once without enemies (after M3.4) and once with.

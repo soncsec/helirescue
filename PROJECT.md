@@ -59,9 +59,8 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-18 | First release stays as it is (no controls hint or "rescue complete" message) until M3 brings the title and result screens |
 | 2026-10-18 | PM review: WebKit (Safari, iPhone, iPad) added to the e2e browsers; fit-to-screen scaling on phones and tablets (H8); one localStorage key for the high score, mute and progress (H9); Retry restarts the current mission on game over; mission bonus scaled by the share of people saved; soldiers on rooftops and in the street; the game pauses on focus loss |
 | 2026-10-18 | M3 reordered: the mission frame (people groups, mission end, lives, title) comes before weapons and enemies, so a winnable mission can be play-tested early |
-| 2026-10-18 | Turning: a Turn key (and a third touch button) flips the helicopter; the gun fires the way it faces, so it can retreat while shooting. Claude's recommendation, to confirm before M3.5 |
+| 2026-10-18 | Turning: a Turn key (and a third touch button) flips the helicopter; the gun fires the way it faces, so it can retreat while shooting. Confirmed by the owner |
 
 ## 6. Open questions
 
-1. Turning: Claude recommends a deliberate Turn key, as in Choplifter, with a third touch button. The alternative is facing that follows the direction of flight (simpler, two touch buttons, but no shooting while retreating). Confirm before M3.5 starts.
-2. Phone performance target: 60 fps on a mid-range phone from the last three years? Decide in M2.6 when the first phone measurement exists.
+1. Phone performance target: 60 fps on a mid-range phone from the last three years? Decide in M2.6 when the first phone measurement exists.
