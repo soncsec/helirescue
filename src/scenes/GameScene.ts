@@ -35,7 +35,9 @@ import {
   type Person,
   type PeopleEvent,
 } from '../logic/people';
+import { wantsTouch } from '../logic/device';
 import { createRng } from '../logic/rng';
+import type { TouchState } from '../logic/touch';
 import { rescueScore } from '../logic/score';
 import { roofOf, roofUnder, type Roof } from '../logic/world';
 import { SKELETON_MAP } from '../missions/skeleton';
@@ -68,6 +70,8 @@ export interface GameSnapshot {
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
   seed: number;
+  /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
+  input: { touch: boolean; touchAxis: Axis; zoom: number };
   /** Left edge of the camera view in the world. */
   cameraX: number;
   worldWidth: number;
@@ -103,6 +107,8 @@ export class GameScene extends Phaser.Scene {
   private hutDoorX = 0;
   private heliEvents: GameSnapshot['events'] = [];
   private keys!: Keys;
+  /** Written by the HUD scene's D-pad; null on keyboard devices. */
+  private touch: TouchState | null = null;
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
@@ -168,7 +174,10 @@ export class GameScene extends Phaser.Scene {
     this.sprite = this.add.sprite(spawn.x, spawn.y, SIDE.key).play(SIDE.key);
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
-    this.scene.launch('Hud', { read: (): HudState | null => this.hudState() });
+    this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
+      ? { axis: { x: 0, y: 0 } }
+      : null;
+    this.scene.launch('Hud', { read: (): HudState | null => this.hudState(), touch: this.touch });
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, width, GAME_HEIGHT);
@@ -220,6 +229,11 @@ export class GameScene extends Phaser.Scene {
       people: this.people.map((p) => ({ id: p.id, mode: p.mode, x: p.x, y: p.y })),
       hud: this.hudState(),
       seed: this.seed,
+      input: {
+        touch: this.touch !== null,
+        touchAxis: { ...(this.touch?.axis ?? { x: 0, y: 0 }) },
+        zoom: this.scale.zoom,
+      },
       cameraX: this.cameras.main.scrollX,
       worldWidth: this.map.width,
       roofs: this.roofs.map((r) => ({ ...r })),
@@ -319,15 +333,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.heli.facing, 0);
   }
 
+  /** Keyboard first; the touch D-pad fills in whatever axis the keys leave at rest. */
   private readAxis(): Axis {
     const k = this.keys;
     const left = k.left.isDown || k.a.isDown;
     const right = k.right.isDown || k.d.isDown;
     const up = k.up.isDown || k.w.isDown;
     const down = k.down.isDown || k.s.isDown;
+    const t = this.touch?.axis ?? { x: 0, y: 0 };
     return {
-      x: left === right ? 0 : left ? -1 : 1,
-      y: up === down ? 0 : up ? -1 : 1,
+      x: left === right ? t.x : left ? -1 : 1,
+      y: up === down ? t.y : up ? -1 : 1,
     };
   }
 }
