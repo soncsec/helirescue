@@ -9,13 +9,18 @@ const PRODUCTION_CSP =
   "object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
 
 test('the game runs under the production Content-Security-Policy', async ({ page }) => {
-  await page.route('**/*', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      headers: { ...response.headers(), 'content-security-policy': PRODUCTION_CSP },
-    });
-  });
+  // Only http responses carry headers. WebKit also routes the blob: URLs
+  // Phaser makes itself; those stay under the policy without our help.
+  await page.route(
+    (url) => url.protocol === 'http:' || url.protocol === 'https:',
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        headers: { ...response.headers(), 'content-security-policy': PRODUCTION_CSP },
+      });
+    },
+  );
 
   const problems: string[] = [];
   page.on('console', (m) => {

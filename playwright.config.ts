@@ -18,6 +18,8 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // WebKit is the engine behind Safari and every iPhone and iPad browser.
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
     // The e2e build is the normal build plus the test hook (src/debug/testHook.ts).
