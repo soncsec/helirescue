@@ -69,18 +69,64 @@ export const LANDING_FX = {
   groundSlack: 8,
 } as const;
 
-/** Temporary health bar, top-left (the full HUD comes in M2.4). */
-export const HEALTH_BAR = {
-  x: 6,
-  y: 6,
-  width: 60,
-  height: 4,
-  frame: 0x0b0814,
-  empty: 0x3a2a44,
-  colour: 0x5fd35f,
-  lowColour: 0xe0503a,
-  /** Turns red at or below this much health. */
-  lowAt: 30,
+/**
+ * People to rescue (H3, src/logic/people.ts). The civilian sprite is 32x32
+ * with the feet on the bottom row; the figure is about 26 px tall, 12 px wide.
+ */
+export const PEOPLE = {
+  runSpeed: 40,
+  walkSpeed: 30,
+  boardReach: 4,
+  boardSeconds: 0.3,
+  capacity: 10,
+  unloadGap: 0.6,
+  height: 26,
+  halfWidth: 6,
+} as const;
+
+/** Points (scope: points per person saved, plus a mission bonus from M3; no penalties). */
+export const SCORING = {
+  perPerson: 100,
+} as const;
+
+/** The base sprite (tools/art/base.mjs): 160x96, roof surface 48 px above the street. */
+export const BASE_ART = {
+  /** Hut door, from the sprite's left edge: rescued people walk in here. */
+  hutDoorX: 30,
+} as const;
+
+/**
+ * Heads-up display along the top of the screen. The bottom corners stay clear
+ * for the touch controls (M2.5).
+ */
+export const HUD = {
+  /** Browser monospace until the owner approves a HUD font. */
+  font: 'monospace',
+  fontSize: 8,
+  colour: '#e6ebf2',
+  accent: '#ffd23f',
+  shadow: '#140f1f',
+  /** Top-left health bar. */
+  bar: {
+    x: 6,
+    y: 6,
+    width: 60,
+    height: 4,
+    frame: 0x0b0814,
+    empty: 0x3a2a44,
+    colour: 0x5fd35f,
+    lowColour: 0xe0503a,
+    /** Turns red at or below this much health. */
+    lowAt: 30,
+  },
+  /** Text row: top edge, and where SAVED, ABOARD and SCORE start. */
+  textY: 4,
+  savedX: 80,
+  aboardX: 170,
+  scoreRight: 474,
+  /** "+100" popup when someone is saved: rise (px) and duration (ms). */
+  popupRise: 18,
+  popupMs: 900,
 } as const;
 
 /** Shared look of the city: street, background layers and building tiles. */
@@ -104,6 +150,8 @@ export const WORLD_LIMITS = {
   minWidth: 480,
   /** Clear sky above the tallest roof: the helicopter (48 px) plus room to fly. */
   minSky: 80,
+  /** People stand at least this far in from a roof edge. */
+  personMargin: 8,
 } as const;
 
 /** Camera follow (H1). */

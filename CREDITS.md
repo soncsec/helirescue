@@ -27,6 +27,7 @@ Drawn by Claude with the scripts in `tools/art/`. Same licence as this repo.
 
 - `assets/sprites/heli-side.png`, `assets/sprites/heli-front.png`: `tools/art/helicopter.mjs`
 - `assets/tiles/buildings-night.png`, `assets/tiles/buildings-war.png`: `tools/art/buildings.mjs`
+- `assets/sprites/base.png`: `tools/art/base.mjs` (the rescue base, M2.4)
 
 ### Other sources (approved by the owner 2026-10-18)
 

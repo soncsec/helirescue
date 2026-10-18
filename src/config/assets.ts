@@ -52,6 +52,16 @@ export const SHEETS: readonly SheetSpec[] = [
     source: 'Claude',
   },
   {
+    key: 'base',
+    file: `${sprites}base.png`,
+    frameWidth: 160,
+    frameHeight: 96,
+    frames: 2,
+    fps: 3,
+    label: 'Rescue base',
+    source: 'Claude',
+  },
+  {
     key: 'civilian-blue',
     file: `${sprites}civilian-blue-walk.png`,
     frameWidth: 32,

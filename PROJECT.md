@@ -13,7 +13,7 @@ A side-scrolling rescue game in the spirit of Choplifter. You fly a rescue helic
 | Genre and camera | Side-scrolling. One wide world per mission (about 4–6 screens); the camera follows the helicopter. Your base is on one side. |
 | Core loop | Fly out, land on a rooftop, people run aboard, fly back to base and unload. People count as saved only when unloaded at base. |
 | Capacity | 8–12 people on board at once; exact number set by play-testing (`tuning.ts`) |
-| Controls | Keyboard only: fly with arrows or WASD, fire the forward gun, drop bombs, pause, M to mute. No touch or gamepad in v1. |
+| Controls | Keyboard on desktop: fly with arrows or WASD, fire the forward gun, drop bombs, pause, M to mute. Touch on phones and tablets: an on-screen D-pad (left thumb) and Fire and Bomb buttons (right thumb), landscape only (a "turn your phone sideways" message in portrait). No gamepad in v1. |
 | Helicopter | Health bar; a hard landing damages it; it cannot land on top of people. 3 helicopters for the whole game. |
 | Weapons | Forward-firing gun and bombs that drop straight down. No power-ups in v1. |
 | Enemies | Ground soldiers (shoot at people running to the helicopter), tanks, anti-aircraft guns (shoot at the helicopter), enemy aircraft from mission 2 |
@@ -55,6 +55,7 @@ Out of scope for v1: online scores, accounts, touch and gamepad controls, power-
 | 2026-10-18 | Art test picks approved: Claude's helicopter and building tiles, recoloured pack civilians and soldier, pack tank, gunship and backdrops, CC0 VTOL jet, CC-BY turret credited on the title screen; screen 480×270 |
 | 2026-10-18 | Keep the art test as a developer art viewer (`?scene=art`); remove the unused edomin helicopter |
 | 2026-10-18 | Draw a proper base (hangar, flag, large H pad) in M2.4 |
+| 2026-10-18 | Playable on phones and tablets too: touch D-pad and buttons, landscape only, built in M2 before the first release (scope change from keyboard only) |
 
 ## 6. Open questions
 

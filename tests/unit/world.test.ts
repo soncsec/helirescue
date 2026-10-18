@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD_LIMITS } from '../../src/config/tuning';
-import { roofOf, roofs, worldProblems, type WorldMap } from '../../src/logic/world';
+import { roofOf, roofs, roofUnder, worldProblems, type WorldMap } from '../../src/logic/world';
 import { SKELETON_MAP } from '../../src/missions/skeleton';
 
-const limits = { tile: 16, groundY: 254, minWidth: 480, minSky: 80 };
+const limits = { tile: 16, groundY: 254, minWidth: 480, minSky: 80, personMargin: 8 };
 const b = (x: number, width = 4, height = 3): WorldMap['buildings'][number] => ({
   x,
   width,
@@ -16,6 +16,7 @@ const map = (over: Partial<WorldMap> = {}): WorldMap => ({
   theme: 'night',
   base: b(0, 6, 2),
   buildings: [b(200), b(400)],
+  people: [],
   ...over,
 });
 
@@ -81,9 +82,37 @@ describe('worldProblems', () => {
   });
 });
 
+describe('people on the map', () => {
+  it('finds the building roof under a point, never the base', () => {
+    expect(roofUnder(map(), 230, limits)).toEqual(roofOf(b(200), limits));
+    expect(roofUnder(map(), 50, limits)).toBeNull();
+    expect(roofUnder(map(), 300, limits)).toBeNull();
+  });
+
+  it('accepts people standing on building roofs', () => {
+    expect(worldProblems(map({ people: [{ x: 230 }, { x: 420 }] }), limits)).toEqual([]);
+  });
+
+  it('rejects people in mid-air, on the base, or at a roof edge', () => {
+    expect(worldProblems(map({ people: [{ x: 300 }] }), limits)).toEqual([
+      'person 0 is not on a building roof',
+    ]);
+    expect(worldProblems(map({ people: [{ x: 50 }] }), limits)).toEqual([
+      'person 0 is not on a building roof',
+    ]);
+    expect(worldProblems(map({ people: [{ x: 203 }] }), limits)).toEqual([
+      'person 0 is too close to the roof edge',
+    ]);
+  });
+});
+
 describe('skeleton map', () => {
   it('follows the world rules', () => {
     expect(worldProblems(SKELETON_MAP, WORLD_LIMITS)).toEqual([]);
+  });
+
+  it('has someone to rescue', () => {
+    expect(SKELETON_MAP.people.length).toBeGreaterThan(0);
   });
 
   it('has roofs with a helipad to land on', () => {

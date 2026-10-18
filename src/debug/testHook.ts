@@ -11,6 +11,8 @@ export interface TestHook {
   /** The key of the scene that is running, or null while loading. */
   scene(): string | null;
   snapshot(): GameSnapshot | null;
+  /** True while the HUD scene is running on top of the game. */
+  hudActive(): boolean;
   /** The art viewer's state, while it is running. */
   art(): ArtSnapshot | null;
 }
@@ -28,6 +30,7 @@ export function installTestHook(game: Phaser.Game): void {
       const s = game.scene.getScene('Game') as GameScene | null;
       return s && game.scene.isActive('Game') ? s.snapshot() : null;
     },
+    hudActive: () => game.scene.isActive('Hud'),
     art: () => {
       const s = game.scene.getScene('Art') as ArtScene | null;
       return s && game.scene.isActive('Art') ? s.snapshot() : null;

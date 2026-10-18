@@ -142,6 +142,24 @@ test('flying low into a building stops at its wall', async ({ page }) => {
   expect(s.health).toBe(100);
 });
 
+test('the HUD shows the rescue status and a person waits on a far roof', async ({ page }) => {
+  await openGame(page);
+  const s = await snapshot(page);
+  expect(s.hud).toEqual({
+    health: 100,
+    maxHealth: 100,
+    saved: 0,
+    total: 1,
+    aboard: 0,
+    capacity: 10,
+    score: 0,
+  });
+  expect(s.people).toHaveLength(1);
+  expect(s.people[0]?.mode).toBe('waiting');
+  expect(s.people[0]?.x).toBeGreaterThan(960); // beyond the first two screens
+  expect(await page.evaluate(() => window.__game?.hudActive() ?? false)).toBe(true);
+});
+
 test('?seed= in the URL sets the random seed', async ({ page }) => {
   await openGame(page, '?seed=42');
   expect((await snapshot(page)).seed).toBe(42);
