@@ -39,7 +39,7 @@
 - [ ] M0.3 Branch protection on `main` with the four required checks; secret scanning with push protection; Dependabot alerts
 - [ ] M0.4 GitHub Pages turned on (Actions mode, `main` only); first staging deploy and ZAP scan pass
 - [ ] M0.5 Portal PR adding `games/helirescue.json` (status `in-development`) and the ports to NEW-GAME.md
-- [ ] M0.6 Docs page: builder in `tools/docs-page/`, published as a new HeliRescue docs page
+- [x] M0.6 Docs page: builder in `tools/docs-page/`, published as a new HeliRescue docs page (https://claude.ai/artifact/KN8heqnPfx15tcX8vqXJwB)
 
 **Acceptance criteria:** a direct push to `main` is rejected; a PR shows all checks green; staging loads; `legacy/` is not in the repo; the portal PR passes its checks.
 
