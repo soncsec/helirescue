@@ -1,6 +1,7 @@
 /**
- * Art test manifest (roadmap M1): every candidate sprite sheet, its frame size
- * and where it came from. A unit test checks each sheet's real size against it.
+ * Art manifest: every sprite sheet and image the game loads, its frame size
+ * and where it came from (chosen in the M1 art test). A unit test checks each
+ * file's real size against it.
  */
 export type ArtSource = 'Claude' | 'Pack' | 'Pack, recoloured' | 'CC0' | 'CC-BY 3.0';
 
@@ -25,12 +26,14 @@ export interface ImageSpec {
   source: ArtSource;
 }
 
-const dir = 'assets/art-test/';
+const sprites = 'assets/sprites/';
+const tiles = 'assets/tiles/';
+const backgrounds = 'assets/backgrounds/';
 
 export const SHEETS: readonly SheetSpec[] = [
   {
     key: 'heli-side',
-    file: `${dir}heli-side.png`,
+    file: `${sprites}heli-side.png`,
     frameWidth: 108,
     frameHeight: 48,
     frames: 4,
@@ -40,7 +43,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'heli-front',
-    file: `${dir}heli-front.png`,
+    file: `${sprites}heli-front.png`,
     frameWidth: 80,
     frameHeight: 48,
     frames: 4,
@@ -49,18 +52,8 @@ export const SHEETS: readonly SheetSpec[] = [
     source: 'Claude',
   },
   {
-    key: 'heli-edomin',
-    file: `${dir}heli-edomin.png`,
-    frameWidth: 96,
-    frameHeight: 32,
-    frames: 8,
-    fps: 16,
-    label: 'Helicopter (edomin)',
-    source: 'CC0',
-  },
-  {
     key: 'civilian-blue',
-    file: `${dir}civilian-blue-walk.png`,
+    file: `${sprites}civilian-blue-walk.png`,
     frameWidth: 32,
     frameHeight: 32,
     frames: 6,
@@ -70,7 +63,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'civilian-green',
-    file: `${dir}civilian-green-walk.png`,
+    file: `${sprites}civilian-green-walk.png`,
     frameWidth: 32,
     frameHeight: 32,
     frames: 6,
@@ -80,7 +73,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'civilian-yellow',
-    file: `${dir}civilian-yellow-walk.png`,
+    file: `${sprites}civilian-yellow-walk.png`,
     frameWidth: 32,
     frameHeight: 32,
     frames: 6,
@@ -90,7 +83,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'soldier',
-    file: `${dir}soldier.png`,
+    file: `${sprites}soldier.png`,
     frameWidth: 75,
     frameHeight: 48,
     frames: 15,
@@ -100,7 +93,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'tank',
-    file: `${dir}tank.png`,
+    file: `${sprites}tank.png`,
     frameWidth: 128,
     frameHeight: 64,
     frames: 4,
@@ -110,7 +103,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'gunship',
-    file: `${dir}gunship.png`,
+    file: `${sprites}gunship.png`,
     frameWidth: 106,
     frameHeight: 77,
     frames: 8,
@@ -120,7 +113,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'aa-turret',
-    file: `${dir}aa-turret.png`,
+    file: `${sprites}aa-turret.png`,
     frameWidth: 50,
     frameHeight: 32,
     frames: 5,
@@ -130,7 +123,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'explosion',
-    file: `${dir}explosion.png`,
+    file: `${sprites}explosion.png`,
     frameWidth: 64,
     frameHeight: 64,
     frames: 8,
@@ -140,7 +133,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'buildings-night',
-    file: `${dir}buildings-night.png`,
+    file: `${tiles}buildings-night.png`,
     frameWidth: 16,
     frameHeight: 16,
     frames: 16,
@@ -150,7 +143,7 @@ export const SHEETS: readonly SheetSpec[] = [
   },
   {
     key: 'buildings-war',
-    file: `${dir}buildings-war.png`,
+    file: `${tiles}buildings-war.png`,
     frameWidth: 16,
     frameHeight: 16,
     frames: 16,
@@ -163,7 +156,7 @@ export const SHEETS: readonly SheetSpec[] = [
 export const IMAGES: readonly ImageSpec[] = [
   {
     key: 'vtol-jet',
-    file: `${dir}vtol-jet.png`,
+    file: `${sprites}vtol-jet.png`,
     width: 141,
     height: 43,
     label: 'Enemy VTOL jet',
@@ -171,7 +164,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'city-sky',
-    file: `${dir}city-sky.png`,
+    file: `${backgrounds}city-sky.png`,
     width: 288,
     height: 192,
     label: 'City sky',
@@ -179,7 +172,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'city-far',
-    file: `${dir}city-far.png`,
+    file: `${backgrounds}city-far.png`,
     width: 288,
     height: 192,
     label: 'City, far',
@@ -187,7 +180,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'city-near',
-    file: `${dir}city-near.png`,
+    file: `${backgrounds}city-near.png`,
     width: 288,
     height: 192,
     label: 'City, near',
@@ -195,7 +188,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'industrial-sky',
-    file: `${dir}industrial-sky.png`,
+    file: `${backgrounds}industrial-sky.png`,
     width: 272,
     height: 160,
     label: 'Industrial sky',
@@ -203,7 +196,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'industrial-far',
-    file: `${dir}industrial-far.png`,
+    file: `${backgrounds}industrial-far.png`,
     width: 213,
     height: 142,
     label: 'Industrial, far',
@@ -211,7 +204,7 @@ export const IMAGES: readonly ImageSpec[] = [
   },
   {
     key: 'industrial-near',
-    file: `${dir}industrial-near.png`,
+    file: `${backgrounds}industrial-near.png`,
     width: 272,
     height: 150,
     label: 'Industrial, near',

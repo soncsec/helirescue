@@ -5,7 +5,7 @@ async function art(page: Page): Promise<ArtSnapshot | null> {
   return page.evaluate(() => window.__game?.art() ?? null);
 }
 
-test('the art test loads every candidate with no errors or third-party requests', async ({
+test('the art viewer loads all the art with no errors or third-party requests', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -29,11 +29,8 @@ test('the art test loads every candidate with no errors or third-party requests'
   await expect.poll(async () => (await art(page))?.mode).toBe('friendly');
   await page.keyboard.press('4');
   await expect.poll(async () => (await art(page))?.mode).toBe('enemies');
-  await page.keyboard.press('h');
-  await expect.poll(async () => (await art(page))?.heli).toBe('edomin');
   await page.keyboard.press('1');
   await expect.poll(async () => (await art(page))?.mode).toBe('night');
-  expect((await art(page))?.heli).toBe('edomin');
 
   await page.waitForTimeout(500);
   expect(errors).toEqual([]);

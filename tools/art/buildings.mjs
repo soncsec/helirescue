@@ -1,4 +1,4 @@
-// Claude-made building tiles (art test candidate): 16x16 tiles that the game
+// Claude-made building tiles for HeliRescue: 16x16 tiles that the game
 // assembles into buildings with flat roofs to land on (ARCHITECTURE.md H4).
 // Run: node tools/art/buildings.mjs <out-dir>
 // Writes buildings-night.png and buildings-war.png: one row of 16 tiles each.

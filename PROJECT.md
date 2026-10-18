@@ -52,6 +52,8 @@ Out of scope for v1: online scores, accounts, touch and gamepad controls, power-
 | 2026-10-18 | Slug `helirescue`, title "HeliRescue", ports 5180 (dev), 6180 (preview), 6181 (Playwright) |
 | 2026-10-18 | Same release process and portal integration as the other games, with a card image in their style |
 | 2026-10-18 | A new docs page for HeliRescue (separate from Star Destroyer's) |
+| 2026-10-18 | Art test picks approved: Claude's helicopter and building tiles, recoloured pack civilians and soldier, pack tank, gunship and backdrops, CC0 VTOL jet, CC-BY turret credited on the title screen; screen 480×270 |
+| 2026-10-18 | Keep the art test as a developer art viewer (`?scene=art`); remove the unused edomin helicopter |
 
 ## 6. Open questions
 

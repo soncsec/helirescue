@@ -1,4 +1,4 @@
-// Recoloured variants of art-pack sprites (art test candidates).
+// Recoloured variants of art-pack sprites for HeliRescue.
 // Reads from legacy/ (read-only, CC0) and writes new PNGs.
 // Run: node tools/art/recolour.mjs <out-dir> [--preview]
 import { readPng, Rgba } from './lib.mjs';

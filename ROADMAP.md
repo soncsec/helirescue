@@ -8,7 +8,7 @@
 | Milestone | Status |
 |---|---|
 | M0 Setup | Done (2026-10-18) |
-| M1 Art test | Candidates built; waiting for the owner's choice |
+| M1 Art test | Done |
 | M2 Walking skeleton (to production) | Not started |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
@@ -51,9 +51,11 @@
 
 - [x] M1.1 Gather candidates: from the pack, from CC0 packs (listed with links and licences for approval), and Claude-made (`tools/art/`, H6)
 - [x] M1.2 Preview scene with a side-by-side comparison and a mock gameplay frame per set
-- [ ] M1.3 Copy the chosen art into `public/assets/`; list every file in `CREDITS.md`
+- [x] M1.3 Copy the chosen art into `public/assets/`; list every file in `CREDITS.md`
 
 **Acceptance criteria:** the owner approves one art set; every file has a recorded licence; the preview runs on staging.
+
+**Verified 2026-10-18:** the owner approved every pick, the 480×270 screen and an in-game credit for the CC-BY turret; every file is listed with its licence in `CREDITS.md` (checked by `check_repo.py`); the preview ran on staging after PR #4. The preview stays as a developer art viewer (`?scene=art`), with the unused candidate removed.
 
 ## M2 — Walking skeleton (to production)
 
@@ -77,7 +79,7 @@
 - [ ] M3.3 Ground soldiers who shoot at people; anti-aircraft guns that shoot at the helicopter
 - [ ] M3.4 Health bar, crash, 3 helicopters, game over
 - [ ] M3.5 Mission end when everyone is saved or dead; result screen with bonus; high score
-- [ ] M3.6 Title screen and pause
+- [ ] M3.6 Title screen (with the CC-BY art credit) and pause
 
 **Acceptance criteria:** mission 1 can be won or lost; scoring rules are unit tested; an e2e test plays a scripted rescue; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test.
 

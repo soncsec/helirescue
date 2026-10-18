@@ -22,7 +22,7 @@ export const game = new Phaser.Game({
     mode: Phaser.Scale.NONE,
     zoom: zoomForWindow(),
   },
-  // ?scene=art opens the art test (roadmap M1); Phaser starts the first scene listed.
+  // ?scene=art opens the art viewer; Phaser starts the first scene listed.
   scene:
     startScene(window.location.search) === 'Art' ? [ArtScene, GameScene] : [GameScene, ArtScene],
 });
