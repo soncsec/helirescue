@@ -1,47 +1,37 @@
 import Phaser from 'phaser';
-import { IMAGES, SHEETS, TILE, type SheetSpec } from '../config/artTest';
-import { ART_TEST, DEFAULT_SEED, GAME_HEIGHT, GAME_WIDTH } from '../config/tuning';
+import { IMAGES, SHEETS, TILE, type SheetSpec } from '../config/assets';
+import { CC_BY_CREDIT } from '../config/credits';
+import { ART_VIEWER, DEFAULT_SEED, GAME_HEIGHT, GAME_WIDTH } from '../config/tuning';
 import { layoutBuilding } from '../logic/buildingLayout';
 import { createRng } from '../logic/rng';
 
 type Mode = 'night' | 'war' | 'friendly' | 'enemies';
 
-/** Which candidates each line-up page shows. */
+/** Which sprites each line-up page shows. */
 const PAGES: Record<'friendly' | 'enemies', readonly string[]> = {
-  friendly: [
-    'heli-side',
-    'heli-front',
-    'heli-edomin',
-    'civilian-blue',
-    'civilian-green',
-    'civilian-yellow',
-  ],
+  friendly: ['heli-side', 'heli-front', 'civilian-blue', 'civilian-green', 'civilian-yellow'],
   enemies: ['soldier', 'tank', 'gunship', 'aa-turret', 'explosion', 'vtol-jet'],
 };
-type HeliChoice = 'claude' | 'edomin';
-
 interface ArtData {
   mode?: Mode;
-  heli?: HeliChoice;
 }
 
-/** Read-only view of the art test, used by the e2e test hook. */
+/** Read-only view of the art viewer, used by the e2e test hook. */
 export interface ArtSnapshot {
   mode: Mode;
-  heli: HeliChoice;
   /** Manifest keys whose texture failed to load. */
   missing: string[];
 }
 
-const A = ART_TEST;
+const A = ART_VIEWER;
 
 /**
- * Art test (roadmap M1): shows the candidate art in two mock gameplay scenes
- * and a labelled line-up, so the owner can choose. Open with ?scene=art.
+ * Art viewer (from the M1 art test): shows the game's art in two mock gameplay
+ * scenes and labelled line-ups, for checking new or changed art. Developer
+ * page, not linked from the game. Open with ?scene=art.
  */
 export class ArtScene extends Phaser.Scene {
   private mode: Mode = 'night';
-  private heli: HeliChoice = 'claude';
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private layers: { sprite: Phaser.GameObjects.TileSprite; factor: number }[] = [];
 
@@ -51,13 +41,12 @@ export class ArtScene extends Phaser.Scene {
 
   init(data: ArtData): void {
     this.mode = data.mode ?? 'night';
-    this.heli = data.heli ?? 'claude';
     this.layers = [];
   }
 
   preload(): void {
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
-      console.error(`art test: could not load ${file.key} (${String(file.src)})`);
+      console.error(`art viewer: could not load ${file.key} (${String(file.src)})`);
     });
     for (const s of SHEETS) {
       this.load.spritesheet(s.key, s.file, {
@@ -77,14 +66,13 @@ export class ArtScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (!kb) throw new Error('keyboard input is not available');
     this.cursors = kb.createCursorKeys();
-    const go = (mode: Mode, heli = this.heli): void => {
-      this.scene.restart({ mode, heli } satisfies ArtData);
+    const go = (mode: Mode): void => {
+      this.scene.restart({ mode } satisfies ArtData);
     };
     kb.on('keydown-ONE', () => go('night'));
     kb.on('keydown-TWO', () => go('war'));
     kb.on('keydown-THREE', () => go('friendly'));
     kb.on('keydown-FOUR', () => go('enemies'));
-    kb.on('keydown-H', () => go(this.mode, this.heli === 'claude' ? 'edomin' : 'claude'));
   }
 
   override update(_time: number, deltaMs: number): void {
@@ -99,7 +87,7 @@ export class ArtScene extends Phaser.Scene {
     const missing = [...SHEETS, ...IMAGES]
       .map((a) => a.key)
       .filter((k) => !this.textures.exists(k) || this.textures.get(k).key === '__MISSING');
-    return { mode: this.mode, heli: this.heli, missing };
+    return { mode: this.mode, missing };
   }
 
   private makeAnim(s: SheetSpec): void {
@@ -162,17 +150,10 @@ export class ArtScene extends Phaser.Scene {
     // Landed helicopter, front view, with civilians walking to it.
     const r0 = roof(0);
     const pad = r0.x + r0.width / 2;
-    if (this.heli === 'claude') {
-      this.add
-        .sprite(pad, r0.y + 1, 'heli-front')
-        .setOrigin(0.5, 1)
-        .play('heli-front');
-    } else {
-      this.add
-        .sprite(pad, r0.y + 1, 'heli-edomin')
-        .setOrigin(0.5, 1)
-        .play('heli-edomin');
-    }
+    this.add
+      .sprite(pad, r0.y + 1, 'heli-front')
+      .setOrigin(0.5, 1)
+      .play('heli-front');
     ['civilian-blue', 'civilian-green', 'civilian-yellow'].forEach((key, i) => {
       const c = this.add
         .sprite(r0.x + 4 + i * 12, r0.y, key)
@@ -191,10 +172,7 @@ export class ArtScene extends Phaser.Scene {
     });
 
     // Hovering helicopter, side view.
-    const side =
-      this.heli === 'claude'
-        ? this.add.sprite(A.hoverX, A.hoverY, 'heli-side').play('heli-side')
-        : this.add.sprite(A.hoverX, A.hoverY, 'heli-edomin').play('heli-edomin');
+    const side = this.add.sprite(A.hoverX, A.hoverY, 'heli-side').play('heli-side');
     this.tweens.add({
       targets: side,
       y: A.hoverY + A.hoverBob,
@@ -321,20 +299,24 @@ export class ArtScene extends Phaser.Scene {
   }
 
   private buildHud(): void {
-    const heli = this.heli === 'claude' ? 'Claude' : 'edomin';
+    const style = {
+      fontFamily: 'monospace',
+      fontSize: A.hud.fontSize,
+      color: A.hud.colour,
+      backgroundColor: A.hud.background,
+      padding: { x: 3, y: 2 },
+    };
     this.add
       .text(
         4,
         4,
-        `ART TEST  1 night city  2 war zone  3 friendly  4 enemies  H helicopter: ${heli}  arrows scroll`,
-        {
-          fontFamily: 'monospace',
-          fontSize: A.hud.fontSize,
-          color: A.hud.colour,
-          backgroundColor: A.hud.background,
-          padding: { x: 3, y: 2 },
-        },
+        'ART VIEWER  1 night city  2 war zone  3 friendly  4 enemies  arrows scroll',
+        style,
       )
+      .setScrollFactor(0);
+    this.add
+      .text(GAME_WIDTH - 4, GAME_HEIGHT - 2, CC_BY_CREDIT, style)
+      .setOrigin(1, 1)
       .setScrollFactor(0);
   }
 

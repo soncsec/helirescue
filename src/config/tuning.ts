@@ -1,7 +1,7 @@
 /** All gameplay numbers live here so they can be tuned in one place. */
 /**
  * Screen size in game pixels: 16:9, so 1920x1080 is an exact 4x zoom.
- * Chosen for the art test (M1); confirm or change it with the owner.
+ * Approved by the owner on 2026-10-18 (M1 art test).
  */
 export const GAME_WIDTH = 480;
 export const GAME_HEIGHT = 270;
@@ -19,8 +19,8 @@ export const PLAYER = {
 /** Seed for the random number generator; override with ?seed= in the URL. */
 export const DEFAULT_SEED = 1;
 
-/** Art test scene (roadmap M1): layout of the two mock scenes and the line-up. */
-export const ART_TEST = {
+/** Art viewer (?scene=art, from the M1 art test): layout of the two mock scenes and the line-ups. */
+export const ART_VIEWER = {
   worldWidth: 960,
   /** Top of the street. */
   groundY: 254,

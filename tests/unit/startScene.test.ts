@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { startScene } from '../../src/logic/startScene';
 
 describe('startScene', () => {
-  it('opens the art test for ?scene=art', () => {
+  it('opens the art viewer for ?scene=art', () => {
     expect(startScene('?scene=art')).toBe('Art');
     expect(startScene('?seed=4&scene=art')).toBe('Art');
   });

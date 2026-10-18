@@ -11,7 +11,7 @@ export interface TestHook {
   /** The key of the scene that is running, or null while loading. */
   scene(): string | null;
   snapshot(): GameSnapshot | null;
-  /** The art test's state, while it is running. */
+  /** The art viewer's state, while it is running. */
   art(): ArtSnapshot | null;
 }
 

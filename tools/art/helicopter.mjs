@@ -1,4 +1,4 @@
-// Claude-made rescue helicopter (art test candidate).
+// Claude-made rescue helicopter for HeliRescue.
 // Run: node tools/art/helicopter.mjs <out-dir>
 // Writes heli-side.png (4 rotor frames, facing right, 108x48 each) and
 // heli-front.png (4 rotor frames, 80x48 each), plus enlarged previews.

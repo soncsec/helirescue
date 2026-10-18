@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { IMAGES, SHEETS } from '../../src/config/artTest';
+import { IMAGES, SHEETS } from '../../src/config/assets';
 
 /** Width and height from a PNG's header. */
 function pngSize(file: string): { width: number; height: number } {
@@ -9,7 +9,7 @@ function pngSize(file: string): { width: number; height: number } {
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
-describe('art test manifest', () => {
+describe('art manifest', () => {
   it.each(SHEETS)('$key matches its sprite sheet', (s) => {
     expect(pngSize(s.file)).toEqual({ width: s.frameWidth * s.frames, height: s.frameHeight });
   });
