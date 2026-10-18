@@ -34,7 +34,7 @@ src/
 └── debug/testHook.ts  window.__game for Playwright (e2e build only)
 tests/
 ├── unit/              Vitest, 80% coverage floor on src/logic
-├── e2e/               Playwright in Chromium and Firefox, incl. the production CSP
+├── e2e/               Playwright in Chromium, Firefox and WebKit (Safari, iPhone, iPad), incl. the production CSP
 └── release/           release scripts against a fake server
 scripts/               release.sh, release-remote.sh, smoke_test.py, zap_check.py, check_repo.py
 tools/art/             sprite generator for Claude-made art (H6)
