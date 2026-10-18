@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { sheetSpec } from '../config/assets';
-import { CAMERA, DEFAULT_SEED, GAME_HEIGHT, PLAYER, SCENERY } from '../config/tuning';
-import { step, type Axis, type Bounds, type Point } from '../logic/movement';
+import { CAMERA, DEFAULT_SEED, FLIGHT, GAME_HEIGHT, PLAYER, SCENERY } from '../config/tuning';
+import { fly, hovering, type FlightState } from '../logic/flight';
+import type { Axis, Bounds, Point } from '../logic/movement';
 import { createRng } from '../logic/rng';
 import type { Roof } from '../logic/world';
 import { SKELETON_MAP } from '../missions/skeleton';
@@ -19,6 +20,9 @@ import {
 /** Read-only view of the game state, used by the e2e test hook. */
 export interface GameSnapshot {
   player: Point;
+  /** Velocity in px/s and tilt in degrees. */
+  velocity: Point;
+  tilt: number;
   /** 1 facing right, -1 facing left. */
   facing: 1 | -1;
   seed: number;
@@ -38,13 +42,13 @@ type Keys = Record<
 const HELI = sheetSpec('heli-side');
 
 /**
- * The game (roadmap M2 walking skeleton). M2.1: a wide city with the base at
- * the left end; the camera follows the helicopter (H1). The flight model
- * (M2.2) and landing rules (M2.3) come next.
+ * The game (roadmap M2 walking skeleton): a wide city with the base at the
+ * left end, the camera following the helicopter (H1) and arcade flight (H2).
+ * Landing rules (M2.3) come next.
  */
 export class GameScene extends Phaser.Scene {
   private heli!: Phaser.GameObjects.Sprite;
-  private pos: Point = { x: 0, y: 0 };
+  private flight: FlightState = hovering(0, 0);
   private facing: 1 | -1 = 1;
   private keys!: Keys;
   private seed = DEFAULT_SEED;
@@ -75,8 +79,8 @@ export class GameScene extends Phaser.Scene {
     const halfW = HELI.frameWidth / 2;
     const halfH = HELI.frameHeight / 2;
     this.bounds = { minX: halfW, maxX: width - halfW, minY: halfH, maxY: SCENERY.groundY - halfH };
-    this.pos = { x: (base.left + base.right) / 2, y: base.y - halfH - PLAYER.startAbovePad };
-    this.heli = this.add.sprite(this.pos.x, this.pos.y, HELI.key).play(HELI.key);
+    this.flight = hovering((base.left + base.right) / 2, base.y - halfH - PLAYER.startAbovePad);
+    this.heli = this.add.sprite(this.flight.x, this.flight.y, HELI.key).play(HELI.key);
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, width, GAME_HEIGHT);
@@ -99,19 +103,23 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, deltaMs: number): void {
     const axis = this.readAxis();
-    this.pos = step(this.pos, axis, deltaMs / 1000, PLAYER.speed, this.bounds);
+    this.flight = fly(this.flight, axis, deltaMs / 1000, FLIGHT, this.bounds);
     if (axis.x !== 0 && axis.x !== this.facing) {
       this.facing = axis.x;
       this.heli.setFlipX(this.facing < 0);
       this.lookAhead();
     }
-    this.heli.setPosition(this.pos.x, this.pos.y);
+    const f = this.flight;
+    this.heli.setPosition(f.x, f.y).setAngle(f.tilt);
+    this.heli.anims.timeScale = axis.y < 0 ? PLAYER.rotorClimb : PLAYER.rotorIdle;
     scrollBackdrop(this.layers, this.cameras.main.scrollX);
   }
 
   snapshot(): GameSnapshot {
     return {
-      player: { ...this.pos },
+      player: { x: this.flight.x, y: this.flight.y },
+      velocity: { x: this.flight.vx, y: this.flight.vy },
+      tilt: this.flight.tilt,
       facing: this.facing,
       seed: this.seed,
       cameraX: this.cameras.main.scrollX,

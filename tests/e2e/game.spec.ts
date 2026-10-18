@@ -24,6 +24,14 @@ async function snapshot(page: Page): Promise<GameSnapshot> {
   return snap;
 }
 
+/**
+ * Headless browsers render the game slowly (Chromium about 38 fps, less with
+ * parallel workers), and Phaser caps each early frame at 1/60 s, so the game
+ * runs in slow motion at first. Movement checks wait on the game's own state
+ * with this generous timeout instead of assuming real-time speed.
+ */
+const MOVE = { timeout: 20_000 };
+
 async function openGame(page: Page, query = ''): Promise<void> {
   await page.goto(`./${query}`);
   await expect
@@ -40,7 +48,9 @@ test('boots with no console errors and no third-party requests', async ({ page }
   expect(watched.foreignRequests).toEqual([]);
 });
 
-test('the helicopter starts over the base and the camera follows it', async ({ page }) => {
+test('the helicopter starts over the base, flies with tilt, and the camera follows', async ({
+  page,
+}) => {
   await openGame(page);
   const start = await snapshot(page);
   expect(start.missing).toEqual([]);
@@ -52,23 +62,46 @@ test('the helicopter starts over the base and the camera follows it', async ({ p
   expect(start.worldWidth).toBeGreaterThan(960);
 
   await page.keyboard.down('ArrowRight');
-  await expect.poll(async () => (await snapshot(page)).cameraX).toBeGreaterThan(100);
+  await expect.poll(async () => (await snapshot(page)).tilt, MOVE).toBeGreaterThan(0);
+  await expect.poll(async () => (await snapshot(page)).cameraX, MOVE).toBeGreaterThan(100);
+  const moving = await snapshot(page);
   await page.keyboard.up('ArrowRight');
-  const moved = await snapshot(page);
-  expect(moved.player.y).toBe(start.player.y);
-  expect(moved.facing).toBe(1);
+  expect(moving.velocity.x).toBeGreaterThan(50);
+  expect(moving.facing).toBe(1);
   // The helicopter stays in view.
-  expect(moved.player.x).toBeGreaterThan(moved.cameraX);
-  expect(moved.player.x).toBeLessThan(moved.cameraX + 480);
+  expect(moving.player.x).toBeGreaterThan(moving.cameraX);
+  expect(moving.player.x).toBeLessThan(moving.cameraX + 480);
+  // Released: it levels out and drifts to a stop.
+  await expect.poll(async () => (await snapshot(page)).tilt, MOVE).toBe(0);
+  await expect.poll(async () => Math.abs((await snapshot(page)).velocity.x), MOVE).toBeLessThan(5);
+
+  const before = await snapshot(page);
+  await page.keyboard.down('ArrowUp');
+  await expect
+    .poll(async () => (await snapshot(page)).player.y, MOVE)
+    .toBeLessThan(before.player.y - 30);
+  await page.keyboard.up('ArrowUp');
 
   await page.keyboard.down('ArrowLeft');
-  await expect.poll(async () => (await snapshot(page)).facing).toBe(-1);
-  await expect.poll(async () => (await snapshot(page)).cameraX, { timeout: 10_000 }).toBe(0);
-  await page.waitForTimeout(500);
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
+  await expect.poll(async () => (await snapshot(page)).cameraX, MOVE).toBe(0);
+  await page.waitForTimeout(1500);
   await page.keyboard.up('ArrowLeft');
   const left = await snapshot(page);
   // Stopped at the left edge of the world, fully on screen.
   expect(left.player.x).toBeGreaterThan(0);
+  expect(left.velocity.x).toBeLessThanOrEqual(0);
+});
+
+test('with no input the helicopter sinks slowly', async ({ page }) => {
+  test.slow(); // several MOVE waits in a row
+  await openGame(page);
+  const start = await snapshot(page);
+  await page.waitForTimeout(1500);
+  const later = await snapshot(page);
+  expect(later.player.y).toBeGreaterThan(start.player.y);
+  expect(later.player.y - start.player.y).toBeLessThan(40);
+  expect(later.player.x).toBe(start.player.x);
 });
 
 test('?seed= in the URL sets the random seed', async ({ page }) => {
