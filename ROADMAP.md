@@ -7,7 +7,7 @@
 
 | Milestone | Status |
 |---|---|
-| M0 Setup | In progress |
+| M0 Setup | Done (2026-10-18) |
 | M1 Art test | Not started |
 | M2 Walking skeleton (to production) | Not started |
 | M3 Mission 1 playable | Not started |
@@ -35,13 +35,15 @@
 **Demonstrable result:** `soncsec/helirescue` exists with a protected `main`, green CI, staging on, and the slug claimed in the portal.
 
 - [x] M0.1 Discovery and plan; owner approved 2026-10-18
-- [ ] M0.2 Repo created from `soncsec/game-template`; `scripts/init-game.sh helirescue "HeliRescue" 5180`; approved docs and corrected CLAUDE.md; first CI run
-- [ ] M0.3 Branch protection on `main` with the four required checks; secret scanning with push protection; Dependabot alerts
-- [ ] M0.4 GitHub Pages turned on (Actions mode, `main` only); first staging deploy and ZAP scan pass
-- [ ] M0.5 Portal PR adding `games/helirescue.json` (status `in-development`) and the ports to NEW-GAME.md
+- [x] M0.2 Repo created from `soncsec/game-template`; `scripts/init-game.sh helirescue "HeliRescue" 5180`; approved docs and corrected CLAUDE.md; first CI run
+- [x] M0.3 Branch protection on `main` with the four required checks; secret scanning with push protection; Dependabot alerts
+- [x] M0.4 GitHub Pages turned on (Actions mode, `main` only); first staging deploy and ZAP scan pass
+- [x] M0.5 Portal PR adding `games/helirescue.json` (status `in-development`) and the ports to NEW-GAME.md
 - [x] M0.6 Docs page: builder in `tools/docs-page/`, published as a new HeliRescue docs page (https://claude.ai/artifact/KN8heqnPfx15tcX8vqXJwB)
 
 **Acceptance criteria:** a direct push to `main` is rejected; a PR shows all checks green; staging loads; `legacy/` is not in the repo; the portal PR passes its checks.
+
+**Verified 2026-10-18:** direct push to `main` rejected (GH006); PRs #1 and #2 green; staging deploy and ZAP baseline passed on `main`; https://soncsec.github.io/helirescue/ returns 200; `legacy/` git-ignored; portal PR #22 green and merged.
 
 ## M1 — Art test
 
