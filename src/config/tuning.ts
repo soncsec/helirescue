@@ -6,15 +6,30 @@
 export const GAME_WIDTH = 480;
 export const GAME_HEIGHT = 270;
 
-/**
- * The helicopter. Until the flight model (M2.2) it moves at a steady speed
- * with the arrow keys or WASD.
- */
+/** The helicopter's start and look. */
 export const PLAYER = {
-  /** Pixels per second. */
-  speed: 120,
   /** How far above the base roof it starts, in pixels. */
   startAbovePad: 30,
+  /** Rotor animation speed: 1 = normal, faster while climbing. */
+  rotorIdle: 1,
+  rotorClimb: 1.6,
+} as const;
+
+/**
+ * Flight model (H2, src/logic/flight.ts). Top speed = thrust / dragX
+ * (about 160 px/s); climb speed = (lift - gravity) / dragY (about 108 px/s);
+ * with no input it sinks at gravity / dragY (about 12 px/s).
+ */
+export const FLIGHT = {
+  maxTilt: 12,
+  tiltRate: 60,
+  thrust: 260,
+  dragX: 1.6,
+  lift: 300,
+  descend: 200,
+  gravity: 30,
+  dragY: 2.5,
+  maxStep: 1 / 120,
 } as const;
 
 /** Shared look of the city: street, background layers and building tiles. */
