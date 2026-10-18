@@ -8,7 +8,7 @@
 | Milestone | Status |
 |---|---|
 | M0 Setup | Done (2026-10-18) |
-| M1 Art test | Not started |
+| M1 Art test | Candidates built; waiting for the owner's choice |
 | M2 Walking skeleton (to production) | Not started |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
@@ -49,8 +49,8 @@
 
 **Demonstrable result:** an art preview on staging (`?scene=art`) shows candidate helicopters, rooftops, people, soldiers and enemies over the city background, animating at game scale. The owner chooses.
 
-- [ ] M1.1 Gather candidates: from the pack, from CC0 packs (listed with links and licences for approval), and Claude-made (`tools/art/`, H6)
-- [ ] M1.2 Preview scene with a side-by-side comparison and a mock gameplay frame per set
+- [x] M1.1 Gather candidates: from the pack, from CC0 packs (listed with links and licences for approval), and Claude-made (`tools/art/`, H6)
+- [x] M1.2 Preview scene with a side-by-side comparison and a mock gameplay frame per set
 - [ ] M1.3 Copy the chosen art into `public/assets/`; list every file in `CREDITS.md`
 
 **Acceptance criteria:** the owner approves one art set; every file has a recorded licence; the preview runs on staging.
