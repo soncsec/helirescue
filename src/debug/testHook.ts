@@ -15,6 +15,8 @@ export interface TestHook {
   hudActive(): boolean;
   /** The art viewer's state, while it is running. */
   art(): ArtSnapshot | null;
+  /** True while the game is paused (portrait on a touch device). */
+  paused(): boolean;
 }
 
 declare global {
@@ -31,6 +33,7 @@ export function installTestHook(game: Phaser.Game): void {
       return s && game.scene.isActive('Game') ? s.snapshot() : null;
     },
     hudActive: () => game.scene.isActive('Hud'),
+    paused: () => game.isPaused,
     art: () => {
       const s = game.scene.getScene('Art') as ArtScene | null;
       return s && game.scene.isActive('Art') ? s.snapshot() : null;

@@ -19,31 +19,34 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Fingers steer the game, not the page: no scrolling, zooming or text selection. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 canvas {
   image-rendering: pixelated;
 }
 
-/* Shown on touch-only devices until touch controls arrive (roadmap M2.6). */
-#touch-note {
+/* Touch devices held upright: covers the paused game (roadmap M2.6, landscape only). */
+#rotate-note {
   position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: calc(100% - 32px);
+  inset: 0;
   margin: 0;
-  padding: 10px 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font:
-    10px/1.8 'Press Start 2P',
+    12px/2 'Press Start 2P',
     monospace;
   text-align: center;
   color: #e6ebf2;
-  background: #140f1fe6;
-  border: 2px solid #f0821e;
+  background: #05070f;
 }
 
-#touch-note[hidden] {
+#rotate-note[hidden] {
   display: none;
 }
