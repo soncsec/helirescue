@@ -1,23 +1,22 @@
 import Phaser from 'phaser';
 import './style.css';
 import { GAME_HEIGHT, GAME_WIDTH, HUD } from './config/tuning';
-import { isTouchOnly } from './logic/device';
-import { integerZoom } from './logic/scaling';
+import { isPortrait, wantsTouch } from './logic/device';
+import { zoomFor } from './logic/scaling';
 import { startScene } from './logic/startScene';
 import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
 
+const matches = (query: string): boolean => window.matchMedia(query).matches;
+// Touch devices get the on-screen D-pad and fit-to-screen scaling (H8).
+const touch = wantsTouch(window.location.search, matches);
 const zoomForWindow = (): number =>
-  integerZoom(window.innerWidth, window.innerHeight, GAME_WIDTH, GAME_HEIGHT);
+  zoomFor(touch, window.innerWidth, window.innerHeight, GAME_WIDTH, GAME_HEIGHT);
 
 // Canvas text can't wait for a web font, so load the HUD font before the game
 // starts. If it fails, the game still runs with the fallback font.
 await document.fonts.load(`${HUD.fontSize}px ${HUD.font}`).catch(() => undefined);
-
-// Phones and tablets: say touch controls are coming (until roadmap M2.6).
-const note = document.getElementById('touch-note');
-if (note) note.hidden = !isTouchOnly((q) => window.matchMedia(q).matches);
 
 export const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -28,7 +27,7 @@ export const game = new Phaser.Game({
   pixelArt: true,
   roundPixels: true,
   scale: {
-    // Whole-number zoom keeps pixels crisp; the page's CSS centers the canvas.
+    // The zoom sets the canvas's CSS size; the page's CSS centers the canvas.
     mode: Phaser.Scale.NONE,
     zoom: zoomForWindow(),
   },
@@ -39,10 +38,24 @@ export const game = new Phaser.Game({
       : [GameScene, HudScene, ArtScene],
 });
 
-window.addEventListener('resize', () => {
+// Landscape only on touch devices: in portrait, pause and ask for a turn.
+const rotateNote = document.getElementById('rotate-note');
+function applyOrientation(): void {
+  const portrait = touch && isPortrait(matches);
+  if (rotateNote) rotateNote.hidden = !portrait;
+  if (portrait) game.pause();
+  else game.resume();
+}
+
+function applyWindow(): void {
   const zoom = zoomForWindow();
   if (game.scale.zoom !== zoom) game.scale.setZoom(zoom);
-});
+  applyOrientation();
+}
+
+window.addEventListener('resize', applyWindow);
+window.matchMedia('(orientation: portrait)').addEventListener('change', applyWindow);
+game.events.once(Phaser.Core.Events.READY, applyOrientation);
 
 // The e2e build adds a test hook. Vite replaces MODE at build time, so this
 // branch and the hook module are left out of the normal build entirely.

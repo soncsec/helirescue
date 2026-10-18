@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { TOUCH } from '../../src/config/tuning';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
 /** Records console errors, uncaught exceptions and requests to other hosts. */
@@ -25,12 +26,13 @@ async function snapshot(page: Page): Promise<GameSnapshot> {
 }
 
 /**
- * Headless browsers render the game slowly (Chromium about 38 fps, less with
- * parallel workers), and Phaser caps each early frame at 1/60 s, so the game
- * runs in slow motion at first. Movement checks wait on the game's own state
- * with this generous timeout instead of assuming real-time speed.
+ * Headless browsers render the game slowly (Chromium about 38 fps, WebKit
+ * slower still, and less with parallel workers), and Phaser caps each early
+ * frame at 1/60 s, so the game runs in slow motion at first. Movement checks
+ * wait on the game's own state with this generous timeout instead of assuming
+ * real-time speed.
  */
-const MOVE = { timeout: 20_000 };
+const MOVE = { timeout: 40_000 };
 
 async function openGame(page: Page, query = ''): Promise<void> {
   await page.goto(`./${query}`);
@@ -160,13 +162,49 @@ test('the HUD shows the rescue status and a person waits on a far roof', async (
   expect(await page.evaluate(() => window.__game?.hudActive() ?? false)).toBe(true);
 });
 
-test('the HUD font is loaded and no phone note shows on a desktop', async ({ page }) => {
+test('the HUD font is loaded and a desktop gets keyboard play at a whole-number zoom', async ({
+  page,
+}) => {
   await openGame(page);
   expect(await page.evaluate(() => document.fonts.check('8px "Press Start 2P"'))).toBe(true);
-  await expect(page.locator('#touch-note')).toBeHidden();
+  await expect(page.locator('#rotate-note')).toBeHidden();
+  const { input } = await snapshot(page);
+  expect(input.touch).toBe(false);
+  expect(Number.isInteger(input.zoom)).toBe(true);
+  expect(input.zoom).toBeGreaterThanOrEqual(1);
 });
 
-test('phones and tablets see the touch-controls-coming note', async ({ browser, browserName }) => {
+test('the touch D-pad flies the helicopter', async ({ page }) => {
+  test.slow();
+  await openGame(page, '?touch=1');
+  const before = await snapshot(page);
+  expect(before.input).toMatchObject({ touch: true, touchAxis: { x: 0, y: 0 } });
+
+  // Press up-right on the pad: canvas position times zoom gives the pad's screen spot.
+  const box = await page.locator('#game canvas').boundingBox();
+  if (!box) throw new Error('no canvas');
+  const zoom = box.width / 480;
+  const padX = box.x + TOUCH.padX * zoom;
+  const padY = box.y + TOUCH.padY * zoom;
+  const reach = TOUCH.arrow * zoom;
+  await page.mouse.move(padX + reach, padY - reach);
+  await page.mouse.down();
+  await expect.poll(async () => (await snapshot(page)).input.touchAxis).toEqual({ x: 1, y: -1 });
+  await expect
+    .poll(async () => {
+      const s = await snapshot(page);
+      return s.player.x > before.player.x + 20 && s.player.y < before.player.y - 20;
+    }, MOVE)
+    .toBe(true);
+
+  await page.mouse.up();
+  await expect.poll(async () => (await snapshot(page)).input.touchAxis).toEqual({ x: 0, y: 0 });
+});
+
+test('a phone in landscape gets the D-pad at a fit-to-screen zoom', async ({
+  browser,
+  browserName,
+}) => {
   test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
   const context = await browser.newContext({
     viewport: { width: 844, height: 390 },
@@ -175,8 +213,34 @@ test('phones and tablets see the touch-controls-coming note', async ({ browser, 
   });
   const page = await context.newPage();
   await openGame(page);
-  await expect(page.locator('#touch-note')).toBeVisible();
-  await expect(page.locator('#touch-note')).toContainText('Touch controls are coming soon');
+  await expect(page.locator('#rotate-note')).toBeHidden();
+  const { input } = await snapshot(page);
+  expect(input.touch).toBe(true);
+  expect(input.zoom).toBeCloseTo(390 / 270, 2);
+  const box = await page.locator('#game canvas').boundingBox();
+  expect(box?.height).toBeCloseTo(390, 0);
+  await context.close();
+});
+
+test('a phone held upright is asked to turn, and the game pauses', async ({
+  browser,
+  browserName,
+}) => {
+  test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await openGame(page);
+  await expect(page.locator('#rotate-note')).toBeVisible();
+  await expect(page.locator('#rotate-note')).toContainText('Turn your phone sideways');
+  await expect.poll(() => page.evaluate(() => window.__game?.paused() ?? null)).toBe(true);
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator('#rotate-note')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.__game?.paused() ?? null)).toBe(false);
   await context.close();
 });
 

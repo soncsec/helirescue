@@ -155,6 +155,25 @@ export const WORLD_LIMITS = {
 } as const;
 
 /** Camera follow (H1). */
+/**
+ * Touch D-pad (roadmap M2.6, src/logic/touch.ts): bottom-left corner, in game
+ * pixels. Shown on touch-only devices or with ?touch=1.
+ */
+export const TOUCH = {
+  padX: 52,
+  padY: GAME_HEIGHT - 52,
+  radius: 40,
+  deadZone: 7,
+  grab: 1.3,
+  /** Arrow centre distance from the pad centre, and half the arrow's size. */
+  arrow: 22,
+  arrowSize: 7,
+  fill: 0x140f1f,
+  line: 0xf0821e,
+  pressed: 0xffd23f,
+  alpha: 0.55,
+} as const;
+
 export const CAMERA = {
   /** 0..1: how quickly the camera catches up with the helicopter (1 = at once). */
   lerp: 0.12,
