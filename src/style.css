@@ -1,3 +1,10 @@
+/* HUD font: Press Start 2P (SIL OFL 1.1), bundled; see CREDITS.md. */
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('./assets/fonts/PressStart2P-Regular.ttf') format('truetype');
+  font-display: block;
+}
+
 html,
 body {
   margin: 0;
@@ -16,4 +23,27 @@ body {
 
 canvas {
   image-rendering: pixelated;
+}
+
+/* Shown on touch-only devices until touch controls arrive (roadmap M2.6). */
+#touch-note {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 10px 14px;
+  font:
+    10px/1.8 'Press Start 2P',
+    monospace;
+  text-align: center;
+  color: #e6ebf2;
+  background: #140f1fe6;
+  border: 2px solid #f0821e;
+}
+
+#touch-note[hidden] {
+  display: none;
 }

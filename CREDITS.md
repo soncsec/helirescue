@@ -33,3 +33,7 @@ Drawn by Claude with the scripts in `tools/art/`. Same licence as this repo.
 
 - `assets/sprites/vtol-jet.png`: "VTOL Military Vigilante Turbojet Fighter Plane" by Reactorcore, CC0 1.0. https://opengameart.org/content/vtol-military-vigilante-turbojet-fighter-plane (Milspec_3.png, unchanged)
 - `assets/sprites/aa-turret.png`: "Open Gunner Expansion Pack 1" by master484, **CC-BY 3.0** (https://creativecommons.org/licenses/by/3.0/), credited in the game (`src/config/credits.ts`). https://opengameart.org/content/open-gunner-expansion-pack-1. Changes: the red rotating turret's first row of 5 frames was cropped from OpenGunnerEnemies2.png (rows 7–38 of each 50×50 box) and its background made transparent.
+
+## Font
+
+- **Press Start 2P** by CodeMan38 (Copyright 2012 The Press Start 2P Project Authors), SIL Open Font License 1.1, used for the HUD. File `src/assets/fonts/PressStart2P-Regular.ttf`, SHA-256 `034c77f1f05ec89421e4a63f0e3a4ca1ecf852cc6d2bf611f126f275728e017d`: the same file as the games portal and Star Destroyer (source: `google/fonts` repo, `ofl/pressstart2p/`). Licence text: `src/assets/fonts/PressStart2P-OFL.txt`. Approved by the owner for HeliRescue 2026-10-18.

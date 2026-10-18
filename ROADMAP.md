@@ -9,7 +9,7 @@
 |---|---|
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
-| M2 Walking skeleton (to production) | In progress: M2.4 in review |
+| M2 Walking skeleton (to production) | In progress: M2.5 first release |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
@@ -65,9 +65,9 @@
 - [x] M2.2 Flight model with tilt and rotor animation; keyboard controls (H2)
 - [x] M2.3 Landing rules: safe landing, hard landing, no landing on people (H3)
 - [x] M2.4 One person runs from the roof edge, boards, and is unloaded at base; score and HUD; a proper base drawn by Claude (hangar, flag, large H pad)
-- [ ] M2.5 Touch controls for phones and tablets: on-screen D-pad and buttons, landscape only, scaling for small screens (scope change 2026-10-18)
-- [ ] M2.6 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport
-- [ ] M2.7 First production release with the owner's approval; ZAP before and after
+- [ ] M2.5 First production release (keyboard play) and a live portal card, as soon as it is playable (owner, 2026-10-18): HUD font, a "touch controls coming soon" note on phones, card image; ZAP before and after
+- [ ] M2.6 Touch controls for phones and tablets: on-screen D-pad and buttons, landscape only, scaling for small screens (scope change 2026-10-18)
+- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport; release with the owner's approval
 
 **Acceptance criteria:** each step works in the running game on staging and production; unit tests cover flight and landing rules; ZAP shows no high-risk alerts.
 

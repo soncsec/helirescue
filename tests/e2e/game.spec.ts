@@ -160,6 +160,26 @@ test('the HUD shows the rescue status and a person waits on a far roof', async (
   expect(await page.evaluate(() => window.__game?.hudActive() ?? false)).toBe(true);
 });
 
+test('the HUD font is loaded and no phone note shows on a desktop', async ({ page }) => {
+  await openGame(page);
+  expect(await page.evaluate(() => document.fonts.check('8px "Press Start 2P"'))).toBe(true);
+  await expect(page.locator('#touch-note')).toBeHidden();
+});
+
+test('phones and tablets see the touch-controls-coming note', async ({ browser, browserName }) => {
+  test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await openGame(page);
+  await expect(page.locator('#touch-note')).toBeVisible();
+  await expect(page.locator('#touch-note')).toContainText('Touch controls are coming soon');
+  await context.close();
+});
+
 test('?seed= in the URL sets the random seed', async ({ page }) => {
   await openGame(page, '?seed=42');
   expect((await snapshot(page)).seed).toBe(42);

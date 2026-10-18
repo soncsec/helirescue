@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import './style.css';
-import { GAME_HEIGHT, GAME_WIDTH } from './config/tuning';
+import { GAME_HEIGHT, GAME_WIDTH, HUD } from './config/tuning';
+import { isTouchOnly } from './logic/device';
 import { integerZoom } from './logic/scaling';
 import { startScene } from './logic/startScene';
 import { ArtScene } from './scenes/ArtScene';
@@ -9,6 +10,14 @@ import { HudScene } from './scenes/HudScene';
 
 const zoomForWindow = (): number =>
   integerZoom(window.innerWidth, window.innerHeight, GAME_WIDTH, GAME_HEIGHT);
+
+// Canvas text can't wait for a web font, so load the HUD font before the game
+// starts. If it fails, the game still runs with the fallback font.
+await document.fonts.load(`${HUD.fontSize}px ${HUD.font}`).catch(() => undefined);
+
+// Phones and tablets: say touch controls are coming (until roadmap M2.6).
+const note = document.getElementById('touch-note');
+if (note) note.hidden = !isTouchOnly((q) => window.matchMedia(q).matches);
 
 export const game = new Phaser.Game({
   type: Phaser.AUTO,
