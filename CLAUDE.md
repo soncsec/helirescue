@@ -4,6 +4,14 @@
 
 Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (current task) before starting work.
 
+## Owner's priorities (2026-10-18)
+
+- **Security is the top priority.** Never deploy anything that could be exploited, expose data that isn't meant to be reached, let unwanted commands run, or carry any other security risk. If in doubt, don't deploy; raise it with the owner first.
+- Ask questions whenever something is unclear, including the owner's own requests.
+- The fonts, the art pack and the deployment pipeline work well for the other games. Suggest anything that would make a better product, and ask before acting on it.
+- Get a playable build early and keep it playable, so the owner can give feedback sooner.
+- Remind the owner about unanswered questions and PRs waiting for review.
+
 ## Roles
 
 - **Owner (GitHub `soncsec`):** approves scope, architecture, merges, and production deployments.
