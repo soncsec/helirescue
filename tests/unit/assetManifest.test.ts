@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { IMAGES, SHEETS } from '../../src/config/assets';
+import { IMAGES, SHEETS, sheetSpec } from '../../src/config/assets';
 
 /** Width and height from a PNG's header. */
 function pngSize(file: string): { width: number; height: number } {
@@ -21,5 +21,10 @@ describe('art manifest', () => {
   it('uses each key once', () => {
     const keys = [...SHEETS, ...IMAGES].map((a) => a.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('finds a sheet by key and rejects unknown keys', () => {
+    expect(sheetSpec('heli-side').frameWidth).toBe(108);
+    expect(() => sheetSpec('nope')).toThrow('nope is missing from the art manifest');
   });
 });

@@ -6,14 +6,46 @@
 export const GAME_WIDTH = 480;
 export const GAME_HEIGHT = 270;
 
-/** The placeholder player: a box moved with the arrow keys or WASD. */
+/**
+ * The helicopter. Until the flight model (M2.2) it moves at a steady speed
+ * with the arrow keys or WASD.
+ */
 export const PLAYER = {
-  size: 16,
-  color: 0x2de2e6,
   /** Pixels per second. */
   speed: 120,
-  /** Starting position as a fraction of the screen height. */
-  startY: 0.85,
+  /** How far above the base roof it starts, in pixels. */
+  startAbovePad: 30,
+} as const;
+
+/** Shared look of the city: street, background layers and building tiles. */
+export const SCENERY = {
+  /** Top of the street. */
+  groundY: 254,
+  tile: 16,
+  /** Parallax: how fast each background layer moves relative to the camera. */
+  parallax: { sky: 0.1, far: 0.3, near: 0.6 },
+  /** Fill above the background art, matched to its top row. */
+  skyColour: { night: 0x281d51, war: 0x19281f },
+  streetColour: { night: 0x1a1226, war: 0x26221f },
+  streetEdgeColour: { night: 0x3d2a52, war: 0x55504c },
+} as const;
+
+/** Rules every mission map must follow (checked by a unit test). */
+export const WORLD_LIMITS = {
+  tile: SCENERY.tile,
+  groundY: SCENERY.groundY,
+  /** At least one screen wide. */
+  minWidth: 480,
+  /** Clear sky above the tallest roof: the helicopter (48 px) plus room to fly. */
+  minSky: 80,
+} as const;
+
+/** Camera follow (H1). */
+export const CAMERA = {
+  /** 0..1: how quickly the camera catches up with the helicopter (1 = at once). */
+  lerp: 0.12,
+  /** How far ahead of the helicopter the camera looks, in pixels. */
+  lookAhead: 60,
 } as const;
 
 /** Seed for the random number generator; override with ?seed= in the URL. */
@@ -21,17 +53,9 @@ export const DEFAULT_SEED = 1;
 
 /** Art viewer (?scene=art, from the M1 art test): layout of the two mock scenes and the line-ups. */
 export const ART_VIEWER = {
+  ...SCENERY,
   worldWidth: 960,
-  /** Top of the street. */
-  groundY: 254,
-  tile: 16,
   scrollSpeed: 180,
-  /** Parallax: how fast each background layer moves relative to the camera. */
-  parallax: { sky: 0.1, far: 0.3, near: 0.6 },
-  /** Fill above the background art, matched to its top row. */
-  skyColour: { night: 0x281d51, war: 0x19281f },
-  streetColour: { night: 0x1a1226, war: 0x26221f },
-  streetEdgeColour: { night: 0x3d2a52, war: 0x55504c },
   buildings: [
     { x: 24, width: 7, height: 8, damage: 0.1, helipad: true },
     { x: 176, width: 5, height: 11, damage: 0.3, helipad: false },

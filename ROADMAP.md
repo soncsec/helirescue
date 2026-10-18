@@ -9,7 +9,7 @@
 |---|---|
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
-| M2 Walking skeleton (to production) | Not started |
+| M2 Walking skeleton (to production) | In progress: M2.1 in review |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
@@ -61,7 +61,7 @@
 
 **Demonstrable result:** at `games.soncrant.com/helirescue/` you fly over a short city, land on a rooftop, one person runs aboard, you fly back to base and unload them, and the score goes up.
 
-- [ ] M2.1 World and camera: wide level, layered background, base pad, a few buildings (H1)
+- [x] M2.1 World and camera: wide level, layered background, base pad, a few buildings (H1)
 - [ ] M2.2 Flight model with tilt and rotor animation; keyboard controls (H2)
 - [ ] M2.3 Landing rules: safe landing, hard landing, no landing on people (H3)
 - [ ] M2.4 One person runs from the roof edge, boards, and is unloaded at base; score and HUD
