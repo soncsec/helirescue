@@ -11,7 +11,7 @@
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
 | M2 Walking skeleton (to production) | In progress: M2.7 rescue e2e and touch release (first release live since 2026-10-18) |
-| M3 Mission 1 playable | In progress: M3.1 people groups |
+| M3 Mission 1 playable | In progress: M3.3 lives and Retry |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
 | M6 Polish and v1.0 release | Not started |
@@ -87,7 +87,7 @@
 The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a winnable mission before any enemy exists (reordered 2026-10-18).
 
 - [x] M3.1 Several buildings with groups of people; carrying limit: mission 1 is 4 screens with 16 people in 5 groups (the helicopter carries 10, so at least two trips); every roof with people keeps room to land beside them (map check)
-- [ ] M3.2 Mission end when everyone is saved or lost; result screen with the bonus scaled by the share saved plus a perfect-rescue bonus; high score in the saved-data key (H9)
+- [x] M3.2 Mission end when everyone is saved or lost; result screen with the bonus scaled by the share saved plus a perfect-rescue bonus; high score in the saved-data key (H9); Enter, Space or a tap plays again
 - [ ] M3.3 3 helicopters, game over, and Retry of the current mission
 - [ ] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
 - [ ] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects

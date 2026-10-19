@@ -7,6 +7,7 @@ import { startScene } from './logic/startScene';
 import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
+import { ResultScene } from './scenes/ResultScene';
 
 const matches = (query: string): boolean => window.matchMedia(query).matches;
 // Touch devices get the on-screen D-pad and fit-to-screen scaling (H8).
@@ -34,8 +35,8 @@ export const game = new Phaser.Game({
   // ?scene=art opens the art viewer; Phaser starts the first scene listed.
   scene:
     startScene(window.location.search) === 'Art'
-      ? [ArtScene, GameScene, HudScene]
-      : [GameScene, HudScene, ArtScene],
+      ? [ArtScene, GameScene, HudScene, ResultScene]
+      : [GameScene, HudScene, ResultScene, ArtScene],
 });
 
 // Landscape only on touch devices: in portrait, pause and ask for a turn.

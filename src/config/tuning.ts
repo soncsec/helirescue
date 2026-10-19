@@ -86,9 +86,38 @@ export const PEOPLE = {
   halfWidth: 6,
 } as const;
 
-/** Points (scope: points per person saved, plus a mission bonus from M3; no penalties). */
+/**
+ * Points (scope: points per person saved and a mission bonus; no penalties).
+ * The bonus is scaled by the share of people saved (owner, 2026-10-18), so
+ * letting people be lost never ends a mission at no cost. First values, to
+ * tune after the owner's play-test.
+ */
 export const SCORING = {
   perPerson: 100,
+  missionBonus: 1000,
+  perfectBonus: 500,
+} as const;
+
+/** Saved data checks (H9, src/logic/save.ts). */
+export const SAVE = {
+  /** Highest believable score; a stored value above it counts as corrupt. */
+  maxScore: 9_999_999,
+  missions: 5,
+} as const;
+
+/** Result screen at the end of a mission (src/scenes/ResultScene.ts), in game pixels. */
+export const RESULT = {
+  /** Dark panel in the middle of the screen. */
+  panelWidth: 300,
+  panelHeight: 200,
+  panelColour: 0x140f1f,
+  panelAlpha: 0.92,
+  border: 0xf0821e,
+  /** Text rows: first row's top, row spacing, and the label and number columns. */
+  top: 50,
+  row: 16,
+  labelX: 110,
+  valueRight: 370,
 } as const;
 
 /** The base sprite (tools/art/base.mjs): 160x96, roof surface 48 px above the street. */
@@ -121,10 +150,13 @@ export const HUD = {
     /** Turns red at or below this much health. */
     lowAt: 30,
   },
-  /** Text row: top edge, and where SAVED, ABOARD and SCORE start. */
+  /**
+   * Text row: top edge, and where SAVED, ABOARD and SCORE start. The font is
+   * 8 px per character: "SAVED 16/16" ends at 168, so ABOARD starts after a gap.
+   */
   textY: 4,
   savedX: 80,
-  aboardX: 170,
+  aboardX: 184,
   scoreRight: 474,
   /** "+100" popup when someone is saved: rise (px) and duration (ms). */
   popupRise: 18,

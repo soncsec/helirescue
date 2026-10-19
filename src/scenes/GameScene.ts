@@ -12,6 +12,7 @@ import {
   LANDING_FX,
   PEOPLE,
   PLAYER,
+  SAVE,
   SCENERY,
   SCORING,
   WORLD_LIMITS,
@@ -38,7 +39,8 @@ import {
 import { wantsTouch } from '../logic/device';
 import { createRng } from '../logic/rng';
 import type { TouchState } from '../logic/touch';
-import { rescueScore } from '../logic/score';
+import { missionOver, missionResult, rescueScore } from '../logic/score';
+import { recordScore } from '../logic/save';
 import { roofOf, roofUnder, type Roof } from '../logic/world';
 import { MISSION_1 } from '../missions/mission1';
 import {
@@ -52,6 +54,8 @@ import {
   type ParallaxLayer,
 } from './scenery';
 import type { HudState } from './HudScene';
+import type { ResultData } from './ResultScene';
+import { loadSave, storeSave } from './storage';
 
 /** Read-only view of the game state, used by the e2e test hook. */
 export interface GameSnapshot {
@@ -109,6 +113,8 @@ export class GameScene extends Phaser.Scene {
   private keys!: Keys;
   /** Written by the HUD scene's D-pad; null on keyboard devices. */
   private touch: TouchState | null = null;
+  /** True once the mission has ended and the result screen is up. */
+  private over = false;
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
@@ -125,6 +131,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.seed = seedFromUrl();
     this.heliEvents = [];
+    this.over = false;
     const rng = createRng(this.seed);
     const { theme, width } = this.map;
     const { groundY } = SCENERY;
@@ -210,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.people = moved.people;
     for (const e of moved.events) this.onPeopleEvent(e);
     this.drawPeople();
+    if (!this.over && missionOver(tally(this.people))) this.endMission();
     if (heli.facing !== before.facing) this.lookAhead();
     this.draw(axis);
     scrollBackdrop(this.layers, this.cameras.main.scrollX);
@@ -252,6 +260,38 @@ export class GameScene extends Phaser.Scene {
       capacity: PEOPLE.capacity,
       score: rescueScore(t.saved, SCORING),
     };
+  }
+
+  /**
+   * Test hook only (e2e build): settles the mission as if `saved` people were
+   * rescued and `lost` were lost, so the result screen can be tested without
+   * flying every trip. Not reachable in the player build.
+   */
+  settleForTest(saved: number, lost: number): void {
+    this.people = this.people.map((p, i) =>
+      i < saved
+        ? { ...p, mode: 'saved', roof: null }
+        : i < saved + lost
+          ? { ...p, mode: 'lost', roof: null }
+          : p,
+    );
+  }
+
+  /** Every person is saved or lost: freeze the game and show the result. */
+  private endMission(): void {
+    this.over = true;
+    const t = tally(this.people);
+    const result = missionResult(t.saved, t.lost, t.total, SCORING);
+    const { data, isNew } = recordScore(loadSave(), result.score, SAVE);
+    if (isNew) storeSave(data);
+    const show: ResultData = {
+      result,
+      highScore: data.highScore,
+      newHigh: isNew,
+      touch: this.touch !== null,
+    };
+    this.scene.launch('Result', show);
+    this.scene.pause();
   }
 
   private log(kind: GameSnapshot['events'][number]): void {
