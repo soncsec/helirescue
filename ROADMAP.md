@@ -10,9 +10,9 @@
 |---|---|
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
-| M2 Walking skeleton (to production) | In progress: M2.7 rescue e2e and touch release (first release live since 2026-10-18) |
-| M3 Mission 1 playable | Built; waiting for the owner's play-test (M3.4) |
-| M4 Sound | Not started |
+| M2 Walking skeleton (to production) | Done (2026-10-19) |
+| M3 Mission 1 playable | Done (2026-10-19); landing re-test after the next release |
+| M4 Sound | In progress: M4.1 sources (effects approved; music being chosen) |
 | M5 Missions 2–5 | Not started |
 | M6 Polish and v1.0 release | Not started |
 
@@ -69,10 +69,10 @@
 - [x] M2.4 One person runs from the roof edge, boards, and is unloaded at base; score and HUD; a proper base drawn by Claude (hangar, flag, large H pad)
 - [x] M2.5 First production release (keyboard play) and a live portal card, as soon as it is playable (owner, 2026-10-18): HUD font, a "touch controls coming soon" note on phones, card image; ZAP before and after
 - [x] M2.6 Touch controls for phones and tablets: on-screen D-pad, landscape only with a "turn your phone sideways" message, fit-to-screen scaling on touch devices (H8) (scope change 2026-10-18). The Turn, Fire and Bomb buttons come with their actions in M3.5
-- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval; first phone performance measurement (the owner plays on a real phone)
+- [x] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval; first phone performance measurement (the owner plays on a real phone)
   - [x] WebKit (Safari, iPhone, iPad) added to the e2e browsers (PR #11, 2026-10-18)
   - [x] Full-rescue e2e test (`tests/e2e/rescue.spec.ts`): fly out, land, board, fly home, unload, score 100, no damage; with the keyboard in Chromium, Firefox and WebKit, and with the touch D-pad on a phone in Chromium and WebKit
-  - [ ] Release with the owner's approval; the owner plays on a real phone
+  - [x] Release with the owner's approval; the owner plays on a real phone (2026-10-19: "It runs smoothly on iphone")
 
 **Acceptance criteria:** each step works in the running game on staging and production; unit tests cover flight and landing rules; ZAP shows no high-risk alerts.
 
@@ -89,10 +89,10 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 - [x] M3.1 Several buildings with groups of people; carrying limit: mission 1 is 4 screens with 16 people in 5 groups (the helicopter carries 10, so at least two trips); every roof with people keeps room to land beside them (map check)
 - [x] M3.2 Mission end when everyone is saved or lost; result screen with the bonus scaled by the share saved plus a perfect-rescue bonus; high score in the saved-data key (H9); Enter, Space or a tap plays again
 - [x] M3.3 3 helicopters, game over, and Retry of the current mission: HELI xN under the health bar; the last wreck stays down, then GAME OVER with the points so far (no bonus); Retry restarts the mission with 3 helicopters
-- [ ] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
+- [x] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
   - [x] Title screen with the controls for the device, the high score and the CC-BY credit; pause with P or Esc, a touch pause button, and on focus loss (PR #19)
   - [x] CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, replacing the credit line on the title (owner, 2026-10-19)
-  - [ ] The owner play-tests mission 1 (after a release with the owner's approval)
+  - [x] The owner play-tests mission 1 (2026-10-19, with enemies): flying good; difficulty good to start; scoring good; smooth on iPhone. Landing was not intuitive (holding Down caused damage), so landing now flares near a landing spot and hard landings come from sliding (PR #30)
 - [x] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
   - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards
   - [x] Forward gun (Z or Space, held) and bombs (X) with pooled shots and effects; FIRE and BOMB touch buttons; Claude-made bullet, bomb and spark sprites
@@ -108,6 +108,8 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 **Demonstrable result:** rotor, gun, bomb, explosion, boarding and UI sounds plus a music loop; M mutes.
 
 - [ ] M4.1 Sources listed for the owner's approval; generated effects where they fit
+  - [x] Sound effects: Kenney's CC0 "Sci-fi Sounds" and "Digital SFX" packs, built like Contro (fingerprint-checked download; OGG plus an M4A copy for iPhone) (owner, 2026-10-19)
+  - [ ] Music: one CC0 loop by ansimuz, different from Contro's; the owner picks from candidates
 - [ ] M4.2 Sound starts on the first key press or tap; mute, remembered in the saved-data key (H9)
 
 **Acceptance criteria:** every sound plays in Chrome and Firefox; every licence is recorded; audio under 3 MB.

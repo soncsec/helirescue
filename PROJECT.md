@@ -61,6 +61,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-18 | M3 reordered: the mission frame (people groups, mission end, lives, title) comes before weapons and enemies, so a winnable mission can be play-tested early |
 | 2026-10-18 | Turning: a Turn key (and a third touch button) flips the helicopter; the gun fires the way it faces, so it can retreat while shooting. Confirmed by the owner |
 | 2026-10-19 | Landing (owner's play-test: holding Down to land caused damage): near a landing spot the helicopter flares, slowing its descent to a safe speed, so holding Down lands gently; a hard landing now comes from touching down while still moving sideways fast |
+| 2026-10-19 | Sound (M4): Kenney's CC0 sound-effect packs, built like Contro (OGG plus M4A for iPhone, packs checked by SHA-256); one CC0 music loop by ansimuz, not Contro's, chosen by the owner; within the 3 MB audio budget |
 | 2026-10-19 | Friendly fire: the helicopter's own bullets and bombs can hit the people (lost, no blood), as in Choplifter (scope change) |
 | 2026-10-19 | Street soldiers' shots pass the edge of the roof their target stands on (other buildings still block them), so they are a real threat to people on roofs |
 | 2026-10-19 | Credits: a CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, and scrolling credits at the end of the game (M5.4); the title no longer carries the credit line |
