@@ -113,6 +113,8 @@ export class GameScene extends Phaser.Scene {
   private hutDoorX = 0;
   private heliEvents: GameSnapshot['events'] = [];
   private keys!: Keys;
+  /** C was pressed since the last frame. */
+  private turnPressed = false;
   /** Written by the HUD scene's D-pad; null on keyboard devices. */
   private touch: TouchState | null = null;
   /** True once the mission has ended and the result screen is up. */
@@ -190,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
-      ? { axis: { x: 0, y: 0 }, pause: false }
+      ? { axis: { x: 0, y: 0 }, pause: false, turn: false }
       : null;
     this.scene.launch('Hud', { read: (): HudState | null => this.hudState(), touch: this.touch });
 
@@ -211,6 +213,12 @@ export class GameScene extends Phaser.Scene {
       s: 'S',
       d: 'D',
     }) as Keys;
+    // A press is recorded as it happens: a quick tap can come and go between
+    // frames, which Phaser's JustDown would miss.
+    this.turnPressed = false;
+    kb.on('keydown-C', () => {
+      this.turnPressed = true;
+    });
     kb.on('keydown-P', () => this.pauseGame());
     kb.on('keydown-ESC', () => this.pauseGame());
 
@@ -246,9 +254,10 @@ export class GameScene extends Phaser.Scene {
     const dt = deltaMs / 1000;
     this.world = { ...this.world, people: blockers(this.people, PEOPLE) };
     // With no helicopters left the wreck stays down: no respawn.
+    const turn = this.readTurn();
     const { heli, event } =
       this.wreckedFor === null
-        ? updateHeli(before, axis, dt, this.world, RULES)
+        ? updateHeli(before, axis, dt, this.world, RULES, turn)
         : { heli: before, event: { kind: 'none' } as const };
     this.heli = heli;
     if (event.kind !== 'none') this.onEvent(event);
@@ -436,6 +445,14 @@ export class GameScene extends Phaser.Scene {
   /** Keeps more of the view ahead of the helicopter than behind it. */
   private lookAhead(): void {
     this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.heli.facing, 0);
+  }
+
+  /** One turn per press of C or the touch Turn button. */
+  private readTurn(): boolean {
+    const pressed = this.turnPressed || (this.touch?.turn ?? false);
+    this.turnPressed = false;
+    if (this.touch) this.touch.turn = false;
+    return pressed;
   }
 
   /** Keyboard first; the touch D-pad fills in whatever axis the keys leave at rest. */

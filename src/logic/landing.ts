@@ -183,13 +183,19 @@ function nearLanding(h: Heli, world: HeliWorld, rules: HeliRules): boolean {
   );
 }
 
-/** Advances the helicopter by `dt` seconds of input. */
+/**
+ * Advances the helicopter by `dt` seconds of input. `turn` flips the way it
+ * faces (the Turn key, H2 as amended 2026-10-18): flying does not turn it, so
+ * it can fly backwards while the gun points the other way. It can only turn
+ * in the air; landed, it shows its front view.
+ */
 export function updateHeli(
   h: Heli,
   input: Axis,
   dt: number,
   world: HeliWorld,
   rules: HeliRules,
+  turn = false,
 ): { heli: Heli; event: HeliEvent } {
   if (h.mode === 'crashed') {
     const crashedFor = h.crashedFor + dt;
@@ -208,7 +214,7 @@ export function updateHeli(
     return { heli: { ...h, mode: 'flying', flight, on: null }, event: { kind: 'took-off' } };
   }
 
-  const facing: 1 | -1 = input.x === 0 ? h.facing : input.x;
+  const facing: 1 | -1 = turn ? (h.facing === 1 ? -1 : 1) : h.facing;
   const next = fly(h.flight, input, dt, rules.flight, world.bounds);
   const s = settle(h.flight, next, facing, world, rules.shape);
 

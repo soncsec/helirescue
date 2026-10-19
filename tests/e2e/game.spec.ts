@@ -88,8 +88,10 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
     .toBeLessThan(Math.min(before.player.y - 10, CLEAR_Y));
   await page.keyboard.up('ArrowUp');
 
-  await page.keyboard.down('ArrowLeft');
+  // Turn around with C (flying does not turn it), then fly left.
+  await page.keyboard.press('c');
   await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
+  await page.keyboard.down('ArrowLeft');
   await expect.poll(async () => (await snapshot(page)).cameraX, MOVE).toBe(0);
   await page.waitForTimeout(1500);
   await page.keyboard.up('ArrowLeft');
@@ -250,6 +252,47 @@ test('a phone held upright is asked to turn, and the game pauses', async ({
   await expect.poll(() => page.evaluate(() => window.__game?.paused() ?? null)).toBe(false);
   await page.locator('#game canvas').tap();
   await expect.poll(() => page.evaluate(() => window.__game?.scene() ?? null)).toBe('Game');
+  await context.close();
+});
+
+test('flying backwards keeps the facing; C turns around, once per press', async ({ page }) => {
+  test.slow();
+  await openGame(page);
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(CLEAR_Y);
+  await page.keyboard.up('ArrowUp');
+  // Flying left with no turn: moving backwards, still facing right.
+  await page.keyboard.down('ArrowLeft');
+  await expect.poll(async () => (await snapshot(page)).velocity.x, MOVE).toBeLessThan(-20);
+  await page.keyboard.up('ArrowLeft');
+  expect((await snapshot(page)).facing).toBe(1);
+  // One press, one turn.
+  await page.keyboard.press('c');
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
+  await page.waitForTimeout(300);
+  expect((await snapshot(page)).facing).toBe(-1);
+  await page.keyboard.press('c');
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(1);
+});
+
+test('the touch Turn button turns the helicopter around', async ({ browser, browserName }) => {
+  test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
+  test.slow();
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await openGame(page);
+  // Take off first: it cannot turn while landed.
+  await expect.poll(async () => (await snapshot(page)).mode, MOVE).not.toBe('landed');
+  const box = await page.locator('#game canvas').boundingBox();
+  if (!box) throw new Error('no canvas');
+  const zoom = box.width / 480;
+  const t = TOUCH.buttons.turn;
+  await page.mouse.click(box.x + t.x * zoom, box.y + t.y * zoom);
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
   await context.close();
 });
 

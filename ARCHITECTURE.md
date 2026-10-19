@@ -54,7 +54,7 @@ tools/docs-page/       builds the docs page from the four docs
 - **Decision:** our own arcade flight rules in `src/logic/flight.ts`: thrust, drag, tilt and light gravity, all numbers in `tuning.ts`. Phaser's Arcade physics is used only for collision checks.
 - **Alternatives:** Phaser Arcade velocity alone (too little control over hovering and landing); Matter.js rigid-body physics (realistic, but hard to tune and test).
 - **Tradeoffs:** a small amount of our own code, in return for flight that is unit tested and easy to tune.
-- **Amended 2026-10-18 (confirmed by the owner):** facing is set by a Turn key or button, not by the direction of flight, so the gun fires the way the helicopter faces and it can retreat while shooting (as in Choplifter). Until then the skeleton turns with the tilt.
+- **Amended 2026-10-18 (confirmed by the owner):** facing is set by a Turn key or button, not by the direction of flight, so the gun fires the way the helicopter faces and it can retreat while shooting (as in Choplifter). Built in M3.5: C or the touch Turn button, airborne only.
 
 ### H3: Landing and boarding rules — *Accepted 2026-10-18*
 

@@ -93,6 +93,8 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
   - [x] Title screen with the controls for the device, the high score and the CC-BY credit; pause with P or Esc, a touch pause button, and on focus loss (PR #19)
   - [ ] The owner play-tests mission 1 (after a release with the owner's approval)
 - [ ] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
+  - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards
+  - [ ] Forward gun and bombs with pooled bullets and effects; Fire and Bomb touch buttons
 - [ ] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
 
 **Acceptance criteria:** mission 1 can be won or lost; scoring and saved-data rules are unit tested; an e2e test plays a scripted rescue on desktop and with touch; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test, once without enemies (after M3.4) and once with.

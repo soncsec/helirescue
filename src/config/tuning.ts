@@ -234,6 +234,16 @@ export const TOUCH = {
   pauseX: GAME_WIDTH - 18,
   pauseY: 30,
   pauseHalf: 10,
+  /**
+   * Round buttons for the right thumb (scope: Fire, Bomb and Turn), centre and
+   * radius. Fire is the biggest, in the corner; Bomb to its left; Turn above.
+   * Turn arrives first (M3.5); Fire and Bomb with the weapons.
+   */
+  buttons: {
+    fire: { x: GAME_WIDTH - 44, y: GAME_HEIGHT - 48, r: 28, label: 'FIRE' },
+    bomb: { x: GAME_WIDTH - 108, y: GAME_HEIGHT - 34, r: 20, label: 'BOMB' },
+    turn: { x: GAME_WIDTH - 40, y: GAME_HEIGHT - 114, r: 20, label: 'TURN' },
+  },
 } as const;
 
 /** Title screen (src/scenes/TitleScene.ts), in game pixels. */
@@ -247,15 +257,15 @@ export const TITLE = {
   row: 14,
   keyX: 120,
   actionX: 290,
-  highY: 134,
-  startY: 158,
+  highY: 148,
+  startY: 170,
   /** The CC-BY art credit along the bottom. */
   creditY: 256,
   /** Start prompt blink, ms. */
   blinkMs: 600,
   /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
   panelTop: 82,
-  panelBottom: 180,
+  panelBottom: 192,
   panelWidth: 300,
   panelAlpha: 0.8,
 } as const;

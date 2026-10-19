@@ -18,6 +18,13 @@ export interface TouchState {
   axis: Axis;
   /** Set by the pause button; the game scene clears it when it pauses. */
   pause: boolean;
+  /** Set by the Turn button; the game scene clears it when it turns. */
+  turn: boolean;
+}
+
+/** True when a touch at offset (dx, dy) from a round button's centre presses it. */
+export function buttonHit(dx: number, dy: number, r: number): boolean {
+  return Math.hypot(dx, dy) <= r;
 }
 
 /** The pad is split into 8 equal sectors: a direction counts beyond sin(22.5°) of the distance. */

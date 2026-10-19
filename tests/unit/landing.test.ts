@@ -167,6 +167,36 @@ describe('hard landing', () => {
   });
 });
 
+describe('turning', () => {
+  const left: Axis = { x: -1, y: 0 };
+
+  it('flying does not turn it: it flies backwards facing the same way', () => {
+    const { heli } = run(heliAt(400, 40), left, 1);
+    expect(heli.flight.vx).toBeLessThan(-50);
+    expect(heli.facing).toBe(1);
+  });
+
+  it('the Turn key flips the way it faces, once per press', () => {
+    const h = heliAt(400, 40);
+    const once = updateHeli(h, none, 1 / 60, world, rules, true).heli;
+    expect(once.facing).toBe(-1);
+    expect(updateHeli(once, right, 1 / 60, world, rules).heli.facing).toBe(-1);
+    expect(updateHeli(once, none, 1 / 60, world, rules, true).heli.facing).toBe(1);
+  });
+
+  it('cannot turn while landed', () => {
+    const landed = run(
+      heliAt(250, roof.y - shape.bottom - 2),
+      none,
+      2,
+      world,
+      (x) => x.mode === 'landed',
+    ).heli;
+    expect(landed.mode).toBe('landed');
+    expect(updateHeli(landed, none, 1 / 60, world, rules, true).heli.facing).toBe(landed.facing);
+  });
+});
+
 describe('edges and walls', () => {
   it('slides off a roof edge instead of landing half on it', () => {
     // Skids hang 10 px over the left edge.
