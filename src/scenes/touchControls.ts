@@ -14,8 +14,8 @@ const DIRECTIONS: { x: 1 | -1 | 0; y: 1 | -1 | 0 }[] = [
 /**
  * On-screen D-pad for phones and tablets (roadmap M2.6), drawn in the HUD
  * scene's bottom-left corner. One finger takes hold of the pad and steers
- * until it lifts; the rules are in src/logic/touch.ts. The Turn, Fire and
- * Bomb buttons arrive with their actions (M3.5).
+ * until it lifts; the rules are in src/logic/touch.ts. A pause button sits
+ * top right. The Turn, Fire and Bomb buttons arrive with their actions (M3.5).
  */
 export class TouchControls {
   private readonly pad: Phaser.GameObjects.Graphics;
@@ -29,6 +29,19 @@ export class TouchControls {
     scene.input.addPointer(2);
     this.pad = scene.add.graphics().setPosition(TOUCH.padX, TOUCH.padY).setAlpha(TOUCH.alpha);
     this.draw({ x: 0, y: 0 });
+    // Pause button: a framed "II" under the score.
+    const h = TOUCH.pauseHalf;
+    scene.add
+      .graphics()
+      .setPosition(TOUCH.pauseX, TOUCH.pauseY)
+      .setAlpha(TOUCH.alpha)
+      .fillStyle(TOUCH.fill, 1)
+      .fillRect(-h, -h, 2 * h, 2 * h)
+      .lineStyle(2, TOUCH.line, 1)
+      .strokeRect(-h, -h, 2 * h, 2 * h)
+      .fillStyle(TOUCH.line, 1)
+      .fillRect(-5, -6, 3, 12)
+      .fillRect(2, -6, 3, 12);
     const input = scene.input;
     input.on(PE.POINTER_DOWN, this.onDown, this);
     input.on(PE.POINTER_MOVE, this.onMove, this);
@@ -43,6 +56,11 @@ export class TouchControls {
   }
 
   private onDown(p: Phaser.Input.Pointer): void {
+    const h = TOUCH.pauseHalf;
+    if (Math.abs(p.x - TOUCH.pauseX) <= h && Math.abs(p.y - TOUCH.pauseY) <= h) {
+      this.state.pause = true;
+      return;
+    }
     if (this.pointerId !== null) return;
     const dx = p.x - TOUCH.padX;
     const dy = p.y - TOUCH.padY;

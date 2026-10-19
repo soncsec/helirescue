@@ -29,7 +29,7 @@ src/
 ├── logic/             game rules: flight, landing, boarding, scoring, difficulty, mission progress
 │                      (plain TypeScript, no Phaser imports (ESLint enforces), unit tested)
 ├── missions/          one data file per mission (H4)
-├── scenes/            Phaser scenes: boot, title, game, HUD, mission result, art preview; thin, call into logic/
+├── scenes/            Phaser scenes: title, game, HUD, mission result, pause, art preview; thin, call into logic/
 ├── entities/          pooled bullets, bombs, enemies, people and effects
 └── debug/testHook.ts  window.__game for Playwright (e2e build only)
 tests/

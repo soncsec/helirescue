@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openGame, openTitle } from './helpers';
 import { TOUCH } from '../../src/config/tuning';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
@@ -35,13 +36,6 @@ async function snapshot(page: Page): Promise<GameSnapshot> {
 const MOVE = { timeout: 40_000 };
 /** Flight level well clear of every roof, for tests that fly across the city. */
 const CLEAR_Y = 40;
-
-async function openGame(page: Page, query = ''): Promise<void> {
-  await page.goto(`./${query}`);
-  await expect
-    .poll(() => page.evaluate(() => window.__game?.scene() ?? null), { timeout: 15_000 })
-    .toBe('Game');
-}
 
 test('boots with no console errors and no third-party requests', async ({ page }) => {
   const watched = watchPage(page);
@@ -245,7 +239,8 @@ test('a phone held upright is asked to turn, and the game pauses', async ({
     hasTouch: true,
   });
   const page = await context.newPage();
-  await openGame(page);
+  // Upright, the whole game pauses on the title screen: it can't be started.
+  await openTitle(page);
   await expect(page.locator('#rotate-note')).toBeVisible();
   await expect(page.locator('#rotate-note')).toContainText('Turn your phone sideways');
   await expect.poll(() => page.evaluate(() => window.__game?.paused() ?? null)).toBe(true);
@@ -253,6 +248,8 @@ test('a phone held upright is asked to turn, and the game pauses', async ({
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(page.locator('#rotate-note')).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.__game?.paused() ?? null)).toBe(false);
+  await page.locator('#game canvas').tap();
+  await expect.poll(() => page.evaluate(() => window.__game?.scene() ?? null)).toBe('Game');
   await context.close();
 });
 

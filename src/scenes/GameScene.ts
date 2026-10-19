@@ -190,7 +190,7 @@ export class GameScene extends Phaser.Scene {
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
-      ? { axis: { x: 0, y: 0 } }
+      ? { axis: { x: 0, y: 0 }, pause: false }
       : null;
     this.scene.launch('Hud', { read: (): HudState | null => this.hudState(), touch: this.touch });
 
@@ -211,9 +211,36 @@ export class GameScene extends Phaser.Scene {
       s: 'S',
       d: 'D',
     }) as Keys;
+    kb.on('keydown-P', () => this.pauseGame());
+    kb.on('keydown-ESC', () => this.pauseGame());
+
+    // Pause when the tab or app loses focus (owner, 2026-10-18), so nothing
+    // happens to the helicopter while the player is away.
+    const away = (): void => this.pauseGame();
+    const hidden = (): void => {
+      if (document.visibilityState === 'hidden') this.pauseGame();
+    };
+    window.addEventListener('blur', away);
+    document.addEventListener('visibilitychange', hidden);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('blur', away);
+      document.removeEventListener('visibilitychange', hidden);
+    });
+  }
+
+  /** Opens the pause screen over the frozen game (not after the mission has ended). */
+  pauseGame(): void {
+    if (this.over || !this.scene.isActive()) return;
+    if (this.touch) this.touch.pause = false;
+    this.scene.launch('Pause', { touch: this.touch !== null });
+    this.scene.pause();
   }
 
   override update(_time: number, deltaMs: number): void {
+    if (this.touch?.pause) {
+      this.pauseGame();
+      return;
+    }
     const axis = this.readAxis();
     const before = this.heli;
     const dt = deltaMs / 1000;

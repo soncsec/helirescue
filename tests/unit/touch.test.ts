@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TOUCH } from '../../src/config/tuning';
+import { HUD, TOUCH } from '../../src/config/tuning';
 import { dpadAxis, padHit } from '../../src/logic/touch';
 
 const t = { radius: 40, deadZone: 7, grab: 1.3 };
@@ -49,5 +49,11 @@ describe('TOUCH tuning', () => {
     expect(TOUCH.padY - TOUCH.radius).toBeGreaterThan(40);
     expect(TOUCH.deadZone).toBeLessThan(TOUCH.radius);
     expect(TOUCH.arrow + TOUCH.arrowSize).toBeLessThan(TOUCH.radius);
+  });
+
+  it('keeps the pause button on screen, under the HUD text row and away from the pad', () => {
+    expect(TOUCH.pauseX + TOUCH.pauseHalf).toBeLessThanOrEqual(480);
+    expect(TOUCH.pauseY - TOUCH.pauseHalf).toBeGreaterThan(HUD.textY + HUD.fontSize);
+    expect(TOUCH.pauseY + TOUCH.pauseHalf).toBeLessThan(TOUCH.padY - TOUCH.radius);
   });
 });

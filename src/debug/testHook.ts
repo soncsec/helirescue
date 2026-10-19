@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import type { ArtScene, ArtSnapshot } from '../scenes/ArtScene';
 import type { GameScene, GameSnapshot } from '../scenes/GameScene';
 import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
+import type { TitleScene, TitleSnapshot } from '../scenes/TitleScene';
 
 /**
  * Test-only hook for Playwright (ADR-006). It is loaded only in the e2e build
@@ -24,6 +25,10 @@ export interface TestHook {
   settle(saved: number, lost: number): void;
   /** Crashes the helicopter where it is (a real crash: uses up a helicopter). */
   crash(): void;
+  /** The title screen's text, while it is showing. */
+  title(): TitleSnapshot | null;
+  /** True while the pause screen is showing. */
+  pauseShowing(): boolean;
 }
 
 declare global {
@@ -45,6 +50,11 @@ export function installTestHook(game: Phaser.Game): void {
       const s = game.scene.getScene('Result') as ResultScene | null;
       return s && game.scene.isActive('Result') ? s.snapshot() : null;
     },
+    title: () => {
+      const s = game.scene.getScene('Title') as TitleScene | null;
+      return s && game.scene.isActive('Title') ? s.snapshot() : null;
+    },
+    pauseShowing: () => game.scene.isActive('Pause'),
     crash: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
       s?.crashForTest();
