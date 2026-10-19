@@ -71,6 +71,8 @@
 - [x] M2.6 Touch controls for phones and tablets: on-screen D-pad, landscape only with a "turn your phone sideways" message, fit-to-screen scaling on touch devices (H8) (scope change 2026-10-18). The Turn, Fire and Bomb buttons come with their actions in M3.5
 - [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval; first phone performance measurement (the owner plays on a real phone)
   - [x] WebKit (Safari, iPhone, iPad) added to the e2e browsers (PR #11, 2026-10-18)
+  - [x] Full-rescue e2e test (`tests/e2e/rescue.spec.ts`): fly out, land, board, fly home, unload, score 100, no damage; with the keyboard in Chromium, Firefox and WebKit, and with the touch D-pad on a phone in Chromium and WebKit
+  - [ ] Release with the owner's approval; the owner plays on a real phone
 
 **Acceptance criteria:** each step works in the running game on staging and production; unit tests cover flight and landing rules; ZAP shows no high-risk alerts.
 
