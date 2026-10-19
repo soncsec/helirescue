@@ -352,8 +352,10 @@ export const TITLE = {
   actionX: 290,
   highY: 176,
   startY: 196,
-  /** The CC-BY art credit along the bottom. */
-  creditY: 256,
+  /** The CREDITS prompt (keyboard) or button (touch) along the bottom. */
+  creditY: 246,
+  creditButtonWidth: 96,
+  creditButtonHeight: 18,
   /** Start prompt blink, ms. */
   blinkMs: 600,
   /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
@@ -361,6 +363,19 @@ export const TITLE = {
   panelBottom: 212,
   panelWidth: 300,
   panelAlpha: 0.8,
+} as const;
+
+/** Credits screen (src/scenes/CreditsScene.ts), in game pixels. */
+export const CREDITS_SCREEN = {
+  top: 14,
+  left: 16,
+  row: 12,
+  /** Extra space after the title and between sections. */
+  gap: 6,
+  /** The "go back" prompt, up from the bottom. */
+  bottom: 18,
+  /** Longest line that fits: 480 px less the margins, at 8 px per character. */
+  maxChars: 56,
 } as const;
 
 /** Pause panel (src/scenes/PauseScene.ts), in game pixels. */
