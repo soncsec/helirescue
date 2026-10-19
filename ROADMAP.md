@@ -10,7 +10,7 @@
 |---|---|
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
-| M2 Walking skeleton (to production) | In progress: M2.6 touch controls (first release live since 2026-10-18) |
+| M2 Walking skeleton (to production) | In progress: M2.7 rescue e2e and touch release (first release live since 2026-10-18) |
 | M3 Mission 1 playable | Not started |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
@@ -68,13 +68,15 @@
 - [x] M2.3 Landing rules: safe landing, hard landing, no landing on people (H3)
 - [x] M2.4 One person runs from the roof edge, boards, and is unloaded at base; score and HUD; a proper base drawn by Claude (hangar, flag, large H pad)
 - [x] M2.5 First production release (keyboard play) and a live portal card, as soon as it is playable (owner, 2026-10-18): HUD font, a "touch controls coming soon" note on phones, card image; ZAP before and after
-- [ ] M2.6 Touch controls for phones and tablets: on-screen D-pad and Fire, Bomb and Turn buttons, landscape only with a "turn your phone sideways" message, fit-to-screen scaling on touch devices (H8); first phone performance measurement (scope change 2026-10-18)
-- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval
+- [x] M2.6 Touch controls for phones and tablets: on-screen D-pad, landscape only with a "turn your phone sideways" message, fit-to-screen scaling on touch devices (H8) (scope change 2026-10-18). The Turn, Fire and Bomb buttons come with their actions in M3.5
+- [ ] M2.7 Playwright: fly, land, board, unload, check the score; touch controls in a mobile viewport in Chromium and WebKit; release with the owner's approval; first phone performance measurement (the owner plays on a real phone)
   - [x] WebKit (Safari, iPhone, iPad) added to the e2e browsers (PR #11, 2026-10-18)
 
 **Acceptance criteria:** each step works in the running game on staging and production; unit tests cover flight and landing rules; ZAP shows no high-risk alerts.
 
 **M2.5 verified 2026-10-18:** game release `20261018T194318Z-55adfaf4` live at http://games.soncrant.com/helirescue/ (CI on 55adfaf: Gitleaks, build and test, CodeQL, staging deploy and ZAP baseline all passed; release smoke test passed with security headers). Portal release `20261018T223814Z-60019485` shows the card as live (portal PR #26; smoke test passed on all six live games). After both: the portal's Production check run 39173111194 passed (smoke test from outside the network and ZAP baseline scan of production). M2.6 and M2.7 remain.
+
+**M2.6 verified 2026-10-18:** PR #13 merged (bc15059); main CI passed, including the staging deploy and ZAP baseline. Staging in a phone-sized WebKit window (844×390, touch) shows the D-pad, the canvas fills the full 390 px height (1.44× zoom), the portrait note is hidden in landscape, and there are no page errors. The e2e suite covers the D-pad flying the helicopter, the fit zoom on a phone, and the portrait note pausing the game, in Chromium and WebKit.
 
 ## M3 — Mission 1 playable
 
