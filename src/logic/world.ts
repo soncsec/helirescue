@@ -22,6 +22,21 @@ export interface WorldMap {
   people: readonly { x: number }[];
   /** Anti-aircraft guns, by x position, on building roofs without people (M3.6). */
   aaGuns?: readonly { x: number }[];
+  /**
+   * Soldiers (M3.6): they patrol `patrol` px either side of x, on the roof
+   * below (without people) or, between buildings, on the street.
+   */
+  soldiers?: readonly { x: number; patrol: number }[];
+}
+
+/** Where a soldier stands and walks: on a roof, or on the street in a gap between buildings. */
+export function soldierPost(
+  world: WorldMap,
+  s: { x: number; patrol: number },
+  limits: WorldLimits,
+): { y: number; minX: number; maxX: number; roof: Roof | null } {
+  const roof = roofUnder(world, s.x, limits);
+  return { y: roof ? roof.y : limits.groundY, minX: s.x - s.patrol, maxX: s.x + s.patrol, roof };
 }
 
 export interface WorldLimits {
@@ -140,6 +155,25 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
       problems.push(`gun ${i} is too close to the roof edge`);
     } else if (world.people.some((p) => p.x >= r.left && p.x <= r.right)) {
       problems.push(`gun ${i} shares a roof with people`);
+    }
+  });
+  const solid = [
+    roofOf(world.base, limits, true),
+    ...world.buildings.map((b) => roofOf(b, limits)),
+  ];
+  (world.soldiers ?? []).forEach((s, i) => {
+    const post = soldierPost(world, s, limits);
+    const lo = post.minX - limits.personMargin;
+    const hi = post.maxX + limits.personMargin;
+    if (!(s.patrol >= 0)) problems.push(`soldier ${i} has a negative patrol`);
+    else if (post.roof) {
+      const r = post.roof;
+      if (lo < r.left || hi > r.right) problems.push(`soldier ${i} walks off the roof`);
+      else if (world.people.some((p) => p.x >= r.left && p.x <= r.right)) {
+        problems.push(`soldier ${i} shares a roof with people`);
+      }
+    } else if (lo < 0 || hi > world.width || solid.some((r) => hi > r.left && lo < r.right)) {
+      problems.push(`soldier ${i} walks into a building`);
     }
   });
   world.buildings.forEach((b, i) => {

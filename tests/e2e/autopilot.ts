@@ -32,6 +32,8 @@ export interface Leg {
   untilGunDown?: number;
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
+  /** hold: stop once the helicopter has taken this many flak hits. */
+  untilHits?: number;
 }
 
 /** Autopilot settings, passed into the page. */
@@ -144,7 +146,10 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (leg.kind === 'land') return s.mode === 'landed';
           if (leg.kind === 'hold') {
             const gunDown = s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false;
-            return gunDown || (leg.forMs !== undefined && performance.now() - began >= leg.forMs);
+            const hit = leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits;
+            return (
+              gunDown || hit || (leg.forMs !== undefined && performance.now() - began >= leg.forMs)
+            );
           }
           // Stopped and nearly level: any tilt left would keep pushing it sideways.
           return (

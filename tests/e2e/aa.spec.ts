@@ -36,13 +36,14 @@ test('a gun aims at the helicopter above it and flak takes its health', async ({
   // Hover up and to the left of the gun, in range.
   const x = g.x - 60;
   await fly(page, { kind: 'move', x, floorY: g.floorY, controls: 'keys' });
+  // Stay until the first flak hit (staying long enough to be shot down would end the test).
   await fly(page, {
     kind: 'hold',
     x,
     floorY: g.floorY,
     controls: 'keys',
-    untilGunDown: 0,
-    forMs: 8000,
+    untilHits: 1,
+    forMs: 30_000,
   });
   const s = await snapshot(page);
   expect(s.enemies.hitsTaken).toBeGreaterThan(0);

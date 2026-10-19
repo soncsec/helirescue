@@ -13,6 +13,7 @@ import {
   LIVES,
   EFFECTS,
   ENEMIES,
+  SOLDIERS,
   WEAPONS,
   PEOPLE,
   PLAYER,
@@ -34,6 +35,9 @@ import {
 } from '../logic/landing';
 import {
   blockers,
+  exposed,
+  sameRoof,
+  shootPerson,
   tally,
   updatePeople,
   visible,
@@ -54,6 +58,14 @@ import {
 } from '../logic/enemies';
 import { afterCrash } from '../logic/lives';
 import {
+  hitSoldier,
+  newSquad,
+  soldierBox,
+  updateSquad,
+  type SoldierEvent,
+  type Squad,
+} from '../logic/soldiers';
+import {
   boxDistance,
   flying,
   newWeapons,
@@ -64,7 +76,7 @@ import {
 } from '../logic/weapons';
 import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
 import { recordScore } from '../logic/save';
-import { roofOf, roofUnder, type Roof } from '../logic/world';
+import { roofOf, roofUnder, soldierPost, type Roof } from '../logic/world';
 import { MISSION_1 } from '../missions/mission1';
 import {
   addBackdrop,
@@ -93,7 +105,9 @@ export interface GameSnapshot {
   /** The roof (or street) it is landed on, or null. */
   on: Roof | null;
   /** Every helicopter and people event so far, plus bomb drops and blasts, oldest first (at most 50). */
-  events: (HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast' | 'gun-destroyed')[];
+  events: (
+    HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast' | 'gun-destroyed' | 'soldier-down'
+  )[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
   seed: number;
@@ -114,6 +128,10 @@ export interface GameSnapshot {
     guns: { x: number; y: number; alive: boolean; hp: number; aim: number }[];
     flak: number;
     hitsTaken: number;
+    soldiers: { x: number; y: number; mode: string; facing: 1 | -1 }[];
+    soldierShots: number;
+    /** People shot by soldiers so far. */
+    peopleHit: number;
   };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
@@ -172,6 +190,11 @@ export class GameScene extends Phaser.Scene {
   private bursts: Phaser.GameObjects.Sprite[] = [];
   private nextBurst = 0;
   private hitsTaken = 0;
+  /** Soldiers and their shots (pooled), with their sprites. */
+  private squad!: Squad;
+  private soldierSprites: Phaser.GameObjects.Sprite[] = [];
+  private soldierShotSprites: Phaser.GameObjects.Sprite[] = [];
+  private peopleHit = 0;
   /** Seeded randomness for gameplay (enemy fire). */
   private rng!: Rng;
   /** Written by the HUD scene's D-pad; null on keyboard devices. */
@@ -252,6 +275,7 @@ export class GameScene extends Phaser.Scene {
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.makeWeapons();
     this.makeEnemies();
+    this.makeSquad();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
       ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
@@ -341,6 +365,15 @@ export class GameScene extends Phaser.Scene {
     this.drawShots();
     const fire = updateEnemies(this.enemies, this.heli, dt, this.arena(), ENEMIES, this.rng);
     for (const e of fire) this.onEnemyEvent(e);
+    const out = this.people.filter(exposed).map((p) => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      roof: this.roofs.findIndex((r) => sameRoof(r, p.roof)),
+      vx: p.mode === 'running' ? p.facing * PEOPLE.runSpeed : 0,
+    }));
+    const squad = updateSquad(this.squad, out, dt, this.arena(), SOLDIERS, this.rng);
+    for (const e of squad) this.onSoldierEvent(e);
     this.drawEnemies();
     // Flak may have crashed it: people aboard are lost this same frame.
     const moved = updatePeople(this.people, this.heli, dt, this.hutDoorX, PEOPLE);
@@ -390,6 +423,14 @@ export class GameScene extends Phaser.Scene {
         })),
         flak: this.enemies.flak.filter((s) => s.alive).length,
         hitsTaken: this.hitsTaken,
+        soldiers: this.squad.soldiers.map((s) => ({
+          x: s.x,
+          y: s.y,
+          mode: s.mode,
+          facing: s.facing,
+        })),
+        soldierShots: this.squad.shots.filter((s) => s.alive).length,
+        peopleHit: this.peopleHit,
       },
       input: {
         touch: this.touch !== null,
@@ -575,7 +616,11 @@ export class GameScene extends Phaser.Scene {
       buildings: this.roofs,
       groundY: this.world.groundY,
       width: this.map.width,
-      targets: this.enemies.guns.map((g) => gunBox(g, ENEMIES)),
+      // Guns first, then soldiers: a hit's target index says which.
+      targets: [
+        ...this.enemies.guns.map((g) => gunBox(g, ENEMIES)),
+        ...this.squad.soldiers.map((s) => soldierBox(s, SOLDIERS)),
+      ],
     };
   }
 
@@ -600,6 +645,61 @@ export class GameScene extends Phaser.Scene {
       return fx;
     });
     this.nextBurst = 0;
+  }
+
+  /** The mission's soldiers at their posts, their shot pool, and their sprites. */
+  private makeSquad(): void {
+    const posts = (this.map.soldiers ?? []).map((s) => soldierPost(this.map, s, WORLD_LIMITS));
+    this.squad = newSquad(
+      posts.map((p, i) => {
+        const s = this.map.soldiers?.[i];
+        return { x: s?.x ?? p.minX, y: p.y, minX: p.minX, maxX: p.maxX };
+      }),
+      SOLDIERS,
+    );
+    this.peopleHit = 0;
+    const anim = (key: string, start: number, end: number, fps: number, repeat: number): void => {
+      if (this.anims.exists(key)) return;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers('soldier', { start, end }),
+        frameRate: fps,
+        repeat,
+      });
+    };
+    anim('soldier-run', SOLDIERS.frames.run[0], SOLDIERS.frames.run[1], 14, -1);
+    anim('soldier-shoot', SOLDIERS.frames.shoot[0], SOLDIERS.frames.shoot[1], 8, -1);
+    anim('soldier-down', SOLDIERS.frames.down[0], SOLDIERS.frames.down[1], 6, 0);
+    this.soldierSprites = this.squad.soldiers.map((s) =>
+      this.add
+        .sprite(s.x, s.y + 1, 'soldier')
+        .setOrigin(0.5, 1)
+        .play('soldier-run'),
+    );
+    this.soldierShotSprites = this.squad.shots.map(() =>
+      this.add.sprite(0, 0, 'bullet').setTint(SOLDIERS.shotTint).setVisible(false).setDepth(2),
+    );
+  }
+
+  private onSoldierEvent(e: SoldierEvent): void {
+    if (e.kind === 'soldier-fired') return;
+    if (e.kind === 'person-hit') {
+      const { people, event } = shootPerson(this.people, e.id);
+      this.people = people;
+      if (event) {
+        this.peopleHit++;
+        this.onPeopleEvent(event);
+      }
+      const fx = this.bursts[this.nextBurst++ % this.bursts.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'burst', repeat: 0 });
+      return;
+    }
+    if (e.kind === 'shot-stopped') {
+      const fx = this.sparks[this.nextSpark++ % this.sparks.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
+      return;
+    }
+    this.log('soldier-down');
   }
 
   private onEnemyEvent(e: EnemyEvent): void {
@@ -630,6 +730,22 @@ export class GameScene extends Phaser.Scene {
 
   /** Guns aim (frame) or disappear when destroyed; flak sprites follow their shells. */
   private drawEnemies(): void {
+    this.squad.soldiers.forEach((s, i) => {
+      const sprite = this.soldierSprites[i];
+      if (!sprite) return;
+      sprite
+        .setVisible(s.mode !== 'gone')
+        .setPosition(s.x, s.y + 1)
+        .setFlipX(s.facing < 0);
+      const key =
+        s.mode === 'down' ? 'soldier-down' : s.mode === 'shoot' ? 'soldier-shoot' : 'soldier-run';
+      if (s.mode !== 'gone' && sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    });
+    this.squad.shots.forEach((s, i) => {
+      const sprite = this.soldierShotSprites[i];
+      sprite?.setVisible(s.alive);
+      if (s.alive) sprite?.setPosition(s.x, s.y).setFlipX(s.vx < 0);
+    });
     this.enemies.guns.forEach((g, i) => {
       this.gunSprites[i]?.setVisible(g.alive).setFrame(g.aim);
     });
@@ -650,12 +766,26 @@ export class GameScene extends Phaser.Scene {
       const fx = this.sparks[this.nextSpark++ % this.sparks.length];
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
       if (e.target !== undefined) {
-        const destroyed = hitGun(this.enemies, e.target, 1);
-        if (destroyed) this.onEnemyEvent(destroyed);
+        const guns = this.enemies.guns.length;
+        if (e.target < guns) {
+          const destroyed = hitGun(this.enemies, e.target, 1);
+          if (destroyed) this.onEnemyEvent(destroyed);
+        } else {
+          const down = hitSoldier(this.squad, e.target - guns);
+          if (down) this.onSoldierEvent(down);
+        }
       }
     } else {
       this.shotCounts.blasts++;
       this.log('blast');
+      // A bomb takes down any soldier close enough to the blast.
+      this.squad.soldiers.forEach((s, i) => {
+        const box = soldierBox(s, SOLDIERS);
+        if (box && boxDistance(box, e.x, e.y) <= SOLDIERS.blastRadius) {
+          const down = hitSoldier(this.squad, i);
+          if (down) this.onSoldierEvent(down);
+        }
+      });
       // A bomb destroys any gun close enough to the blast.
       this.enemies.guns.forEach((g, i) => {
         const box = gunBox(g, ENEMIES);

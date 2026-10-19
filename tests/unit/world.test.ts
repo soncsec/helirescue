@@ -182,6 +182,26 @@ describe('anti-aircraft guns on the map', () => {
   });
 });
 
+describe('soldiers on the map', () => {
+  const at = (
+    soldiers: { x: number; patrol: number }[],
+    people: WorldMap['people'] = [],
+  ): WorldMap => map({ buildings: [b(200, 8), b(400, 8)], people, soldiers });
+  it('patrol a roof without people, or the street between buildings', () => {
+    expect(worldProblems(at([{ x: 260, patrol: 20 }]), limits)).toEqual([]);
+    expect(worldProblems(at([{ x: 364, patrol: 20 }]), limits)).toEqual([]); // street gap 328..400
+    expect(worldProblems(at([{ x: 260, patrol: 60 }]), limits)).toEqual([
+      'soldier 0 walks off the roof',
+    ]);
+    expect(worldProblems(at([{ x: 364, patrol: 40 }]), limits)).toEqual([
+      'soldier 0 walks into a building',
+    ]);
+    expect(worldProblems(at([{ x: 260, patrol: 10 }], [{ x: 310 }]), limits)).toEqual([
+      'soldier 0 shares a roof with people',
+    ]);
+  });
+});
+
 describe('mission 1 map', () => {
   it('follows the world rules', () => {
     expect(worldProblems(MISSION_1, WORLD_LIMITS)).toEqual([]);
@@ -203,6 +223,10 @@ describe('mission 1 map', () => {
 
   it('has anti-aircraft guns (M3.6)', () => {
     expect(MISSION_1.aaGuns?.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has soldiers (M3.6)', () => {
+    expect(MISSION_1.soldiers?.length).toBeGreaterThanOrEqual(1);
   });
 
   it('has roofs with a helipad to land on', () => {
