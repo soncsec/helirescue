@@ -22,6 +22,8 @@ test('the title shows the name, the keyboard controls, the high score and the ar
     expect.arrayContaining([
       'HELIRESCUE',
       'ARROWS / WASD FLY',
+      'Z / SPACE SHOOT (HOLD)',
+      'X DROP A BOMB',
       'C TURN AROUND',
       'P / ESC PAUSE',
       'HIGH SCORE 0',
@@ -59,7 +61,14 @@ test('on a phone the title shows the touch controls, and a tap starts the game',
   const t = await title(page);
   expect(t?.touch).toBe(true);
   expect(t?.lines).toEqual(
-    expect.arrayContaining(['D-PAD FLY', 'TURN TURN AROUND', 'II PAUSE', 'TAP TO START']),
+    expect.arrayContaining([
+      'D-PAD FLY',
+      'FIRE SHOOT (HOLD)',
+      'BOMB DROP A BOMB',
+      'TURN TURN AROUND',
+      'II PAUSE',
+      'TAP TO START',
+    ]),
   );
   await page.locator('#game canvas').tap();
   await expect.poll(() => scene(page)).toBe('Game');

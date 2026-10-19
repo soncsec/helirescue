@@ -30,7 +30,8 @@ src/
 │                      (plain TypeScript, no Phaser imports (ESLint enforces), unit tested)
 ├── missions/          one data file per mission (H4)
 ├── scenes/            Phaser scenes: title, game, HUD, mission result, pause, art preview; thin, call into logic/
-├── entities/          pooled bullets, bombs, enemies, people and effects
+├── (pooling)          shots live in a fixed pool in logic/weapons.ts; the scene keeps one sprite per
+│                      slot and a few reused effect sprites (enemies will follow the same pattern)
 └── debug/testHook.ts  window.__game for Playwright (e2e build only)
 tests/
 ├── unit/              Vitest, 80% coverage floor on src/logic
