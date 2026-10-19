@@ -81,6 +81,8 @@ test('losing people scales the bonus down and keeps a higher stored high score',
 test('a corrupt save is ignored and replaced, and the high score survives a reload', async ({
   page,
 }) => {
+  // Two page loads, each through the title screen: give it the slow-test time limit.
+  test.slow();
   await page.addInitScript((k) => {
     if (!sessionStorage.getItem('seeded')) {
       localStorage.setItem(k, '{"highScore":"<script>","muted":7}');
