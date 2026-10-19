@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HUD, TOUCH } from '../../src/config/tuning';
-import { dpadAxis, padHit } from '../../src/logic/touch';
+import { GAME_HEIGHT, GAME_WIDTH, HUD, TOUCH } from '../../src/config/tuning';
+import { buttonHit, dpadAxis, padHit } from '../../src/logic/touch';
 
 const t = { radius: 40, deadZone: 7, grab: 1.3 };
 
@@ -55,5 +55,40 @@ describe('TOUCH tuning', () => {
     expect(TOUCH.pauseX + TOUCH.pauseHalf).toBeLessThanOrEqual(480);
     expect(TOUCH.pauseY - TOUCH.pauseHalf).toBeGreaterThan(HUD.textY + HUD.fontSize);
     expect(TOUCH.pauseY + TOUCH.pauseHalf).toBeLessThan(TOUCH.padY - TOUCH.radius);
+  });
+});
+
+describe('buttonHit', () => {
+  it('presses inside the circle only', () => {
+    expect(buttonHit(0, 0, 20)).toBe(true);
+    expect(buttonHit(12, 16, 20)).toBe(true); // on the edge
+    expect(buttonHit(15, 15, 20)).toBe(false);
+  });
+});
+
+describe('right-thumb buttons', () => {
+  const buttons = Object.values(TOUCH.buttons);
+  it('stay on screen and below the HUD', () => {
+    for (const b of buttons) {
+      expect(b.x - b.r).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.r).toBeLessThanOrEqual(GAME_WIDTH);
+      expect(b.y + b.r).toBeLessThanOrEqual(GAME_HEIGHT);
+      expect(b.y - b.r).toBeGreaterThan(TOUCH.pauseY + TOUCH.pauseHalf);
+    }
+  });
+
+  it('do not overlap each other, the pad or the pause button', () => {
+    const circles = [...buttons, { x: TOUCH.padX, y: TOUCH.padY, r: TOUCH.radius * TOUCH.grab }];
+    for (let i = 0; i < circles.length; i++) {
+      for (let j = i + 1; j < circles.length; j++) {
+        const a = circles[i];
+        const b = circles[j];
+        if (a && b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(a.r + b.r);
+      }
+    }
+  });
+
+  it('are big enough for a thumb: at least 40 game px across (about 58 px on a phone)', () => {
+    for (const b of buttons) expect(2 * b.r).toBeGreaterThanOrEqual(40);
   });
 });

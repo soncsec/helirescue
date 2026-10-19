@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { TOUCH } from '../config/tuning';
+import { HUD, TOUCH } from '../config/tuning';
 import type { Axis } from '../logic/movement';
-import { dpadAxis, padHit, type TouchState } from '../logic/touch';
+import { buttonHit, dpadAxis, padHit, type TouchState } from '../logic/touch';
 
 const PE = Phaser.Input.Events;
 const DIRECTIONS: { x: 1 | -1 | 0; y: 1 | -1 | 0 }[] = [
@@ -15,7 +15,8 @@ const DIRECTIONS: { x: 1 | -1 | 0; y: 1 | -1 | 0 }[] = [
  * On-screen D-pad for phones and tablets (roadmap M2.6), drawn in the HUD
  * scene's bottom-left corner. One finger takes hold of the pad and steers
  * until it lifts; the rules are in src/logic/touch.ts. A pause button sits
- * top right. The Turn, Fire and Bomb buttons arrive with their actions (M3.5).
+ * top right, and the Turn button bottom right for the right thumb. Fire and
+ * Bomb join it with the weapons (M3.5).
  */
 export class TouchControls {
   private readonly pad: Phaser.GameObjects.Graphics;
@@ -42,6 +43,7 @@ export class TouchControls {
       .fillStyle(TOUCH.line, 1)
       .fillRect(-5, -6, 3, 12)
       .fillRect(2, -6, 3, 12);
+    this.button(TOUCH.buttons.turn);
     const input = scene.input;
     input.on(PE.POINTER_DOWN, this.onDown, this);
     input.on(PE.POINTER_MOVE, this.onMove, this);
@@ -61,12 +63,37 @@ export class TouchControls {
       this.state.pause = true;
       return;
     }
+    const t = TOUCH.buttons.turn;
+    if (buttonHit(p.x - t.x, p.y - t.y, t.r)) {
+      this.state.turn = true;
+      return;
+    }
     if (this.pointerId !== null) return;
     const dx = p.x - TOUCH.padX;
     const dy = p.y - TOUCH.padY;
     if (!padHit(dx, dy, TOUCH)) return;
     this.pointerId = p.id;
     this.set(dx, dy);
+  }
+
+  /** A round labelled button for the right thumb. */
+  private button(b: { x: number; y: number; r: number; label: string }): void {
+    this.scene.add
+      .graphics()
+      .setPosition(b.x, b.y)
+      .setAlpha(TOUCH.alpha)
+      .fillStyle(TOUCH.fill, 1)
+      .fillCircle(0, 0, b.r)
+      .lineStyle(2, TOUCH.line, 1)
+      .strokeCircle(0, 0, b.r);
+    this.scene.add
+      .text(b.x, b.y, b.label, {
+        fontFamily: HUD.font,
+        fontSize: `${HUD.fontSize}px`,
+        color: HUD.colour,
+      })
+      .setOrigin(0.5, 0.5)
+      .setAlpha(TOUCH.alpha + 0.3);
   }
 
   private onMove(p: Phaser.Input.Pointer): void {

@@ -243,8 +243,8 @@ async function rescue(page: Page, controls: Controls): Promise<void> {
   const groupLeft = Math.min(...start.people.filter(onRoof).map((p) => p.x));
 
   // Land in the middle of the clear stretch left of the group (people block
-  // the skids), at a spot where the skids fit facing either way: braking can
-  // flip the helicopter round, which mirrors the skid span.
+  // the skids), at a spot where the skids fit facing either way (the Turn
+  // key mirrors the skid span; flying never turns it since M3.5).
   const reach = Math.max(HELI_SHAPE.skidBack, HELI_SHAPE.skidFront);
   const lo = roof.left + reach;
   const hi = groupLeft - PEOPLE.halfWidth - reach;
