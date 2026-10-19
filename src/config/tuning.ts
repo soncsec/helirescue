@@ -48,7 +48,7 @@ export const HELI_SHAPE = {
 
 /**
  * Landing rules (H3, src/logic/landing.ts). Sinking with no input (12 px/s) is
- * always safe; a full-speed dive (92 px/s) costs 32 health.
+ * always safe, and so is holding Down near a landing spot (the flare below).
  */
 export const LANDING = {
   maxHealth: 100,
@@ -56,6 +56,16 @@ export const LANDING = {
   damagePerSpeed: 0.6,
   landingZone: 16,
   respawnSeconds: 2,
+  /**
+   * Flare (owner, 2026-10-19): holding Down lands gently, because within 40 px
+   * of a landing spot the descent slows to 30 px/s (safe is 40). A hard landing
+   * now comes from touching down still moving sideways: above 30 px/s, 0.4
+   * health per px/s (a full-speed 160 px/s touch-down costs 52).
+   */
+  flareZone: 40,
+  flareSpeed: 30,
+  safeSideSpeed: 30,
+  sideDamagePerSpeed: 0.4,
 } as const;
 
 /** Effects for landings and crashes. */

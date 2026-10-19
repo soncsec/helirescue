@@ -22,7 +22,7 @@ export interface Leg {
    * height). land: come down gently. hold: stay at x and y until the gun
    * `untilGunDown` is destroyed.
    */
-  kind: 'climb' | 'move' | 'land' | 'hold';
+  kind: 'climb' | 'move' | 'land' | 'hold' | 'slide';
   x: number;
   /** Helicopter centre y when landed on the target roof. */
   floorY: number;
@@ -34,6 +34,11 @@ export interface Leg {
   forMs?: number;
   /** move or hold: stop once the helicopter has taken this many flak hits. */
   untilHits?: number;
+  /**
+   * slide: hold height y while speeding up to the right, then come down still
+   * pushing right once moving at least this fast (px/s); ends on touch-down.
+   */
+  slideSpeed?: number;
 }
 
 /** Autopilot settings, passed into the page. */
@@ -144,6 +149,7 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
         const done = (s: GameSnapshot): boolean => {
           if (leg.kind === 'climb') return s.player.y < p.cruiseY;
           if (leg.kind === 'land') return s.mode === 'landed';
+          if (leg.kind === 'slide') return s.mode === 'landed' || s.mode === 'crashed';
           if (leg.kind === 'hold') {
             const gunDown = s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false;
             const hit = leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits;
@@ -153,7 +159,10 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           }
           if (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) return true;
           // Stopped and nearly level: any tilt left would keep pushing it sideways.
+          // With a height to fly at, it must be there too.
+          const atHeight = leg.y === undefined || Math.abs(s.player.y - leg.y) <= p.band;
           return (
+            atHeight &&
             Math.abs(s.player.x - leg.x) <= p.spot &&
             Math.abs(s.velocity.x) < p.still &&
             Math.abs(s.tilt) < p.level
@@ -168,6 +177,11 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
         };
         const steer = (s: GameSnapshot): [Dir, Dir] => {
           if (leg.kind === 'climb') return [0, -1];
+          if (leg.kind === 'slide') {
+            const fast = s.velocity.x >= (leg.slideSpeed ?? 0);
+            const ty = leg.y ?? p.cruiseY;
+            return [1, fast ? 1 : s.player.y > ty ? -1 : 0];
+          }
           if (leg.kind === 'land') {
             // Correct only a real drift, so it is not rocking as it touches down.
             const x = Math.abs(leg.x - s.player.x) > p.spot ? hold(s) : 0;

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { fly } from './autopilot';
 import { openGame, openTitle } from './helpers';
-import { TOUCH } from '../../src/config/tuning';
+import { HELI_SHAPE, TOUCH } from '../../src/config/tuning';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
 /** Records console errors, uncaught exceptions and requests to other hosts. */
@@ -113,7 +114,7 @@ test('with no input it sinks gently onto the base pad and lands safely', async (
   expect(landed.player.x).toBe(start.player.x);
 });
 
-test('up takes off; diving onto a roof is a hard landing that costs health', async ({ page }) => {
+test('up takes off; holding Down lands gently on the base (the flare)', async ({ page }) => {
   test.slow();
   await openGame(page);
   await expect.poll(async () => (await snapshot(page)).mode, MOVE).toBe('landed');
@@ -125,9 +126,30 @@ test('up takes off; diving onto a roof is a hard landing that costs health', asy
   await expect.poll(async () => (await snapshot(page)).mode, MOVE).toBe('landed');
   await page.keyboard.up('ArrowDown');
   const after = await snapshot(page);
+  expect(after.events).not.toContain('hard-landing');
+  expect(after.health).toBe(100);
+  expect(after.on?.base).toBe(true);
+});
+
+test('touching down while still flying sideways fast is a hard landing', async ({ page }) => {
+  test.slow();
+  await openGame(page);
+  const base = (await snapshot(page)).roofs.find((r) => r.base);
+  if (!base) throw new Error('no base');
+  // Hover just above the left end of the base roof (its long, flat strip),
+  // then come down while speeding up to the right (the autopilot's slide leg,
+  // frame by frame, inside the page).
+  const floorY = base.y - HELI_SHAPE.bottom;
+  await fly(page, { kind: 'climb', x: 60, floorY, controls: 'keys' });
+  await fly(page, { kind: 'move', x: 60, floorY, controls: 'keys' });
+  await fly(page, { kind: 'move', x: 60, y: floorY - 20, floorY, controls: 'keys' });
+  // Right and Down together from the start: the flare holds the sink to
+  // 30 px/s, so it touches down about 0.7 s later, still over the base, at
+  // around 85 px/s sideways.
+  await fly(page, { kind: 'slide', x: 60, floorY, controls: 'keys', slideSpeed: 0 });
+  const after = await snapshot(page);
   expect(after.events).toContain('hard-landing');
   expect(after.health).toBeLessThan(100);
-  expect(after.health).toBeGreaterThan(0);
   expect(after.on?.base).toBe(true);
 });
 
