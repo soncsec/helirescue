@@ -11,7 +11,6 @@ import {
   type WorldMap,
 } from '../../src/logic/world';
 import { MISSION_1 } from '../../src/missions/mission1';
-import { SKELETON_MAP } from '../../src/missions/skeleton';
 
 const limits = {
   tile: 16,
@@ -187,22 +186,12 @@ describe('mission 1 map', () => {
     expect(MISSION_1.people.length).toBeGreaterThan(PEOPLE.capacity);
   });
 
+  it('has roofs with a helipad to land on', () => {
+    expect(MISSION_1.buildings.filter((x) => x.helipad).length).toBeGreaterThan(0);
+  });
+
   it('starts with a low first building, so a low take-off meets a wall', () => {
     const first = [...MISSION_1.buildings].sort((a, z) => a.x - z.x)[0];
     expect(first?.height).toBeGreaterThanOrEqual(4);
-  });
-});
-
-describe('skeleton map', () => {
-  it('follows the world rules', () => {
-    expect(worldProblems(SKELETON_MAP, WORLD_LIMITS)).toEqual([]);
-  });
-
-  it('has someone to rescue', () => {
-    expect(SKELETON_MAP.people.length).toBeGreaterThan(0);
-  });
-
-  it('has roofs with a helipad to land on', () => {
-    expect(SKELETON_MAP.buildings.filter((x) => x.helipad).length).toBeGreaterThan(0);
   });
 });
