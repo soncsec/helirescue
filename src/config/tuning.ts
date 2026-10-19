@@ -117,6 +117,8 @@ export const WEAPONS = {
   maxBombs: 3,
   /** Between the skids, just under the body. */
   dropY: 20,
+  /** A bomb hits people within this distance of the blast (friendly fire, owner 2026-10-19). */
+  peopleBlastRadius: 28,
   hitStep: 4,
 } as const;
 

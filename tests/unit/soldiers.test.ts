@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { PEOPLE, SOLDIERS } from '../../src/config/tuning';
 import { createRng } from '../../src/logic/rng';
-import { exposed, shootPerson, waitingOn, type Person } from '../../src/logic/people';
+import {
+  exposed,
+  personBox,
+  shootPerson,
+  visible,
+  waitingOn,
+  type Person,
+} from '../../src/logic/people';
 import {
   hitSoldier,
   newSquad,
@@ -184,6 +191,29 @@ describe('people under fire', () => {
     expect(people[0]?.mode).toBe('lost');
     expect(event).toEqual({ kind: 'lost', id: 1 });
     expect(shootPerson(people, 2)).toEqual({ people, event: null });
+  });
+});
+
+describe('friendly fire (owner, 2026-10-19)', () => {
+  const roof = { left: 300, right: 400, y: 150, base: false };
+  it('our own fire can hit anyone standing in the open, not people aboard', () => {
+    const waiting = waitingOn(1, 350, roof);
+    const { people, event } = shootPerson([waiting], 1, visible);
+    expect(people[0]?.mode).toBe('lost');
+    expect(event).toEqual({ kind: 'lost', id: 1 });
+    const aboard: Person = { ...waiting, mode: 'aboard', roof: null };
+    expect(shootPerson([aboard], 1, visible).event).toBeNull();
+  });
+
+  it('a person standing in the open has a hit box; nobody else does', () => {
+    expect(personBox(waitingOn(1, 350, roof), { halfWidth: 6, height: 26 })).toEqual({
+      left: 344,
+      right: 356,
+      top: 124,
+      bottom: 150,
+    });
+    const aboard: Person = { ...waitingOn(1, 350, roof), mode: 'aboard' };
+    expect(personBox(aboard, { halfWidth: 6, height: 26 })).toBeNull();
   });
 });
 

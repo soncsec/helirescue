@@ -36,6 +36,7 @@ import {
 import {
   blockers,
   exposed,
+  personBox,
   sameRoof,
   shootPerson,
   tally,
@@ -120,6 +121,8 @@ export interface GameSnapshot {
     impacts: number;
     blasts: number;
     objects: number;
+    /** People hit by the helicopter's own fire. */
+    peopleHit: number;
     /** The shots flying now. */
     shots: { kind: 'bullet' | 'bomb'; x: number; y: number; vx: number }[];
   };
@@ -182,7 +185,7 @@ export class GameScene extends Phaser.Scene {
   private blasts: Phaser.GameObjects.Sprite[] = [];
   private nextSpark = 0;
   private nextBlast = 0;
-  private shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0 };
+  private shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0, peopleHit: 0 };
   /** Anti-aircraft guns and their flak (pooled), with their sprites. */
   private enemies!: Enemies;
   private gunSprites: Phaser.GameObjects.Sprite[] = [];
@@ -593,7 +596,7 @@ export class GameScene extends Phaser.Scene {
   /** Builds the shot pool and one sprite per slot, plus the effect pools (all hidden). */
   private makeWeapons(): void {
     this.weapons = newWeapons(WEAPONS);
-    this.shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0 };
+    this.shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0, peopleHit: 0 };
     this.shotSprites = this.weapons.shots.map((s) =>
       s.kind === 'bullet'
         ? this.add.sprite(0, 0, 'bullet').play('bullet').setVisible(false)
@@ -620,6 +623,8 @@ export class GameScene extends Phaser.Scene {
       targets: [
         ...this.enemies.guns.map((g) => gunBox(g, ENEMIES)),
         ...this.squad.soldiers.map((s) => soldierBox(s, SOLDIERS)),
+        // Our own fire hits people too (owner, 2026-10-19).
+        ...this.people.map((p) => personBox(p, PEOPLE)),
       ],
     };
   }
@@ -679,6 +684,16 @@ export class GameScene extends Phaser.Scene {
     this.soldierShotSprites = this.squad.shots.map(() =>
       this.add.sprite(0, 0, 'bullet').setTint(SOLDIERS.shotTint).setVisible(false).setDepth(2),
     );
+  }
+
+  /** Someone hit by the helicopter's own bullet or bomb: lost, like a soldier's hit. */
+  private friendlyFire(id: number): void {
+    const { people, event } = shootPerson(this.people, id, visible);
+    this.people = people;
+    if (event) {
+      this.shotCounts.peopleHit++;
+      this.onPeopleEvent(event);
+    }
   }
 
   private onSoldierEvent(e: SoldierEvent): void {
@@ -767,17 +782,26 @@ export class GameScene extends Phaser.Scene {
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
       if (e.target !== undefined) {
         const guns = this.enemies.guns.length;
+        const soldiers = this.squad.soldiers.length;
         if (e.target < guns) {
           const destroyed = hitGun(this.enemies, e.target, 1);
           if (destroyed) this.onEnemyEvent(destroyed);
-        } else {
+        } else if (e.target < guns + soldiers) {
           const down = hitSoldier(this.squad, e.target - guns);
           if (down) this.onSoldierEvent(down);
+        } else {
+          const p = this.people[e.target - guns - soldiers];
+          if (p) this.friendlyFire(p.id);
         }
       }
     } else {
       this.shotCounts.blasts++;
       this.log('blast');
+      // A bomb hits any people close enough to the blast (owner, 2026-10-19).
+      for (const p of this.people) {
+        const box = personBox(p, PEOPLE);
+        if (box && boxDistance(box, e.x, e.y) <= WEAPONS.peopleBlastRadius) this.friendlyFire(p.id);
+      }
       // A bomb takes down any soldier close enough to the blast.
       this.squad.soldiers.forEach((s, i) => {
         const box = soldierBox(s, SOLDIERS);
