@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { GAME_WIDTH, HELI_SHAPE, LANDING, PEOPLE, TOUCH } from '../../src/config/tuning';
+import { GAME_WIDTH, HELI_SHAPE, LANDING, PEOPLE, SCORING, TOUCH } from '../../src/config/tuning';
 import type { Roof } from '../../src/logic/world';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
@@ -30,8 +30,10 @@ const PILOT = {
   /** Cruise height: helicopter centre y, above every roof. */
   cruiseY: 60,
   /** Close enough to the spot (px) and slow enough to stop (px/s). */
-  spot: 16,
+  spot: 10,
   still: 6,
+  /** Nearly level: tilt in degrees. */
+  level: 2,
   /** Wanted speed is distance x approach (per second), at most cruise px/s. */
   approach: 1.2,
   cruise: 140,
@@ -146,26 +148,49 @@ async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
         const done = (s: GameSnapshot): boolean => {
           if (leg.kind === 'climb') return s.player.y < p.cruiseY;
           if (leg.kind === 'land') return s.mode === 'landed';
-          return Math.abs(s.player.x - leg.x) <= p.spot && Math.abs(s.velocity.x) < p.still;
+          // Stopped and nearly level: any tilt left would keep pushing it sideways.
+          return (
+            Math.abs(s.player.x - leg.x) <= p.spot &&
+            Math.abs(s.velocity.x) < p.still &&
+            Math.abs(s.tilt) < p.level
+          );
+        };
+        // Wanted speed shrinks with the distance left, so it arrives slowly.
+        const hold = (s: GameSnapshot): Dir => {
+          const dist = leg.x - s.player.x;
+          const wanted = Math.max(-p.cruise, Math.min(p.cruise, dist * p.approach));
+          const off = wanted - s.velocity.x;
+          return Math.abs(off) > p.slack ? sign(off) : 0;
         };
         const steer = (s: GameSnapshot): [Dir, Dir] => {
           if (leg.kind === 'climb') return [0, -1];
           if (leg.kind === 'land') {
-            if (s.velocity.y > p.sinkRate) return [0, -1];
-            return [0, s.player.y < leg.floorY - p.glide ? 1 : 0];
+            // Correct only a real drift, so it is not rocking as it touches down.
+            const x = Math.abs(leg.x - s.player.x) > p.spot ? hold(s) : 0;
+            if (s.velocity.y > p.sinkRate) return [x, -1];
+            return [x, s.player.y < leg.floorY - p.glide ? 1 : 0];
           }
-          // Wanted speed shrinks with the distance left, so it arrives slowly.
-          const dist = leg.x - s.player.x;
-          const wanted = Math.max(-p.cruise, Math.min(p.cruise, dist * p.approach));
-          const off = wanted - s.velocity.x;
-          return [Math.abs(off) > p.slack ? sign(off) : 0, s.player.y > p.cruiseY ? -1 : 0];
+          return [hold(s), s.player.y > p.cruiseY ? -1 : 0];
         };
 
+        const w = window as unknown as { __trail?: string[] };
+        w.__trail ??= [];
+        const trail = w.__trail;
+        trail.push(`== ${leg.kind} ${Math.round(leg.x)}`);
         const deadline = performance.now() + p.timeoutMs;
         const frame = (): void => {
           const s = game.snapshot();
           if (!s) {
             reject(new Error('game scene stopped'));
+            return;
+          }
+          if (done(s) && leg.kind === 'land' && Math.abs(s.player.y - leg.floorY) > 2) {
+            press(0, 0);
+            reject(
+              new Error(
+                `landed at y ${Math.round(s.player.y)}, not ${leg.floorY}: ${trail.filter((_, i) => i % 10 === 0).join(' | ')}`,
+              ),
+            );
             return;
           }
           if (done(s)) {
@@ -176,10 +201,18 @@ async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (s.mode === 'crashed' || performance.now() > deadline) {
             press(0, 0);
             const at = `x ${Math.round(s.player.x)} y ${Math.round(s.player.y)} vx ${Math.round(s.velocity.x)}`;
-            reject(new Error(`${leg.kind} ${leg.x}: ${s.mode} at ${at}`));
+            reject(
+              new Error(
+                `${leg.kind} ${leg.x}: ${s.mode} at ${at}: ${trail.filter((_, i) => i % 10 === 0).join(' | ')}`,
+              ),
+            );
             return;
           }
           const [x, y] = steer(s);
+          trail.push(
+            `${Math.round(s.player.x)},${Math.round(s.player.y)} v${Math.round(s.velocity.x)},${Math.round(s.velocity.y)} ${s.mode[0]} ${x},${y}`,
+          );
+          if (trail.length > 3000) trail.shift();
           press(x, y);
           requestAnimationFrame(frame);
         };
@@ -198,39 +231,67 @@ async function landAt(page: Page, controls: Controls, x: number, roof: Roof): Pr
   expect(landed.on).toEqual(roof);
 }
 
-/** The full M2 loop: fly out, land by the person, they board, fly home, they are saved. */
+/**
+ * The rescue loop on mission 1: fly to the nearest group, land beside them,
+ * they all board, fly home, they are all saved; everyone else keeps waiting.
+ */
 async function rescue(page: Page, controls: Controls): Promise<void> {
   const start = await snapshot(page);
-  expect(start.hud).toMatchObject({ saved: 0, total: 1, aboard: 0, score: 0 });
+  const total = start.people.length;
+  expect(start.hud).toMatchObject({ saved: 0, total, aboard: 0, score: 0 });
   const base = start.roofs.find((r) => r.base);
-  const person = start.people[0];
-  if (!base || !person) throw new Error('map has no base or no person');
-  const roof = start.roofs.find((r) => !r.base && person.x >= r.left && person.x <= r.right);
-  if (!roof) throw new Error('the person is not on a roof');
+  const roof = start.roofs.find(
+    (r) => !r.base && start.people.some((p) => p.x >= r.left && p.x <= r.right),
+  );
+  if (!base || !roof) throw new Error('map has no base or no people on a roof');
+  const onRoof = (p: { x: number }): boolean => p.x >= roof.left && p.x <= roof.right;
+  const groupIds = start.people.filter(onRoof).map((p) => p.id);
+  const groupLeft = Math.min(...start.people.filter(onRoof).map((p) => p.x));
 
-  // Land facing right, well clear of the person (they block the skids).
-  const pickup = person.x - PEOPLE.halfWidth - HELI_SHAPE.skidFront - 30;
-  expect(pickup - PILOT.spot - HELI_SHAPE.skidBack).toBeGreaterThan(roof.left);
-  await landAt(page, controls, pickup, roof);
-  await expect.poll(async () => (await snapshot(page)).events, WAIT).toContain('boarded');
-  expect((await snapshot(page)).hud.aboard).toBe(1);
+  // Land in the middle of the clear stretch left of the group (people block
+  // the skids), at a spot where the skids fit facing either way: braking can
+  // flip the helicopter round, which mirrors the skid span.
+  const reach = Math.max(HELI_SHAPE.skidBack, HELI_SHAPE.skidFront);
+  const lo = roof.left + reach;
+  const hi = groupLeft - PEOPLE.halfWidth - reach;
+  expect(hi - lo).toBeGreaterThan(2 * PILOT.spot);
+  await landAt(page, controls, (lo + hi) / 2, roof);
+  // Wait until every one of them is all the way in: the HUD's aboard count
+  // includes people still climbing in, who go back to waiting if it takes off.
+  await expect
+    .poll(async () => {
+      const now = await snapshot(page);
+      return now.people.filter((p) => groupIds.includes(p.id) && p.mode === 'aboard').length;
+    }, WAIT)
+    .toBe(groupIds.length);
+  expect((await snapshot(page)).hud.aboard).toBe(groupIds.length);
 
   await landAt(page, controls, (base.left + base.right) / 2, base);
-  await expect.poll(async () => (await snapshot(page)).events, WAIT).toContain('saved');
+  await expect.poll(async () => (await snapshot(page)).hud.saved, WAIT).toBe(groupIds.length);
   const home = await snapshot(page);
-  expect(home.hud).toMatchObject({ saved: 1, total: 1, aboard: 0, score: 100, health: 100 });
-  expect(home.people[0]?.mode).toBe('saved');
+  expect(home.hud).toMatchObject({
+    saved: groupIds.length,
+    total,
+    aboard: 0,
+    score: groupIds.length * SCORING.perPerson,
+    health: 100,
+  });
+  for (const p of home.people) {
+    expect(p.mode).toBe(groupIds.includes(p.id) ? 'saved' : 'waiting');
+  }
   expect(home.events).not.toContain('hard-landing');
   expect(home.events).not.toContain('crashed');
 }
 
-test('a full rescue with the keyboard: fly out, land, board, fly home, score', async ({ page }) => {
+test('a group rescue with the keyboard: fly out, land, board, fly home, score', async ({
+  page,
+}) => {
   test.setTimeout(RESCUE_MS);
   await openGame(page);
   await rescue(page, 'keys');
 });
 
-test('a full rescue with the touch D-pad on a phone', async ({ browser, browserName }) => {
+test('a group rescue with the touch D-pad on a phone', async ({ browser, browserName }) => {
   test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
   test.setTimeout(RESCUE_MS);
   const context = await browser.newContext({

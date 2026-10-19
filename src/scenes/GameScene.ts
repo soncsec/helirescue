@@ -40,7 +40,7 @@ import { createRng } from '../logic/rng';
 import type { TouchState } from '../logic/touch';
 import { rescueScore } from '../logic/score';
 import { roofOf, roofUnder, type Roof } from '../logic/world';
-import { SKELETON_MAP } from '../missions/skeleton';
+import { MISSION_1 } from '../missions/mission1';
 import {
   addBackdrop,
   addBuilding,
@@ -92,7 +92,7 @@ const RULES: HeliRules = { flight: FLIGHT, landing: LANDING, shape: HELI_SHAPE }
 const MAX_EVENTS = 50;
 
 /**
- * The game (roadmap M2 walking skeleton): a wide city with the base at the
+ * The game (mission 1 from roadmap M3.1): a wide city with the base at the
  * left end, the camera following the helicopter (H1), arcade flight (H2),
  * landing rules and the rescue loop (H3): people board on their roof and are
  * saved when unloaded at base. The HUD runs in its own scene (HudScene).
@@ -112,7 +112,7 @@ export class GameScene extends Phaser.Scene {
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
-  private readonly map = SKELETON_MAP;
+  private readonly map = MISSION_1;
 
   constructor() {
     super('Game');
