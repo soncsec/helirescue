@@ -62,6 +62,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-18 | Turning: a Turn key (and a third touch button) flips the helicopter; the gun fires the way it faces, so it can retreat while shooting. Confirmed by the owner |
 | 2026-10-19 | Friendly fire: the helicopter's own bullets and bombs can hit the people (lost, no blood), as in Choplifter (scope change) |
 | 2026-10-19 | Street soldiers' shots pass the edge of the roof their target stands on (other buildings still block them), so they are a real threat to people on roofs |
+| 2026-10-19 | Credits: a CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, and scrolling credits at the end of the game (M5.4); the title no longer carries the credit line |
 | 2026-10-19 | M3.7 frame-rate check: an automated frame-time budget test (our per-frame work in a busy scene), plus the owner's play-test on real devices |
 
 ## 6. Open questions

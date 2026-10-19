@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { CC_BY_CREDIT } from '../config/credits';
 import { sheetSpec } from '../config/assets';
 import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
@@ -17,8 +16,8 @@ const SIDE = sheetSpec('heli-side');
 
 /**
  * Title screen (roadmap M3.4): the name, what to do, the controls for this
- * device, the high score and the CC-BY art credit. Enter, Space or a tap
- * starts mission 1.
+ * device and the high score. Enter, Space or a tap starts mission 1; K or the
+ * CREDITS button opens the credits (CreditsScene).
  */
 export class TitleScene extends Phaser.Scene {
   private lines: string[] = [];
@@ -98,12 +97,39 @@ export class TitleScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
     });
-    this.text(GAME_WIDTH / 2, TITLE.creditY, CC_BY_CREDIT, HUD.colour, HUD.fontSize, 0.5, 1);
+    // Credits (owner, 2026-10-19): K on a keyboard (C turns the helicopter), a CREDITS button on touch.
+    const bw = TITLE.creditButtonWidth;
+    const bh = TITLE.creditButtonHeight;
+    if (this.touch) {
+      this.add
+        .rectangle(GAME_WIDTH / 2, TITLE.creditY, bw, bh, RESULT.panelColour, TITLE.panelAlpha)
+        .setStrokeStyle(2, RESULT.border);
+      this.text(GAME_WIDTH / 2, TITLE.creditY, 'CREDITS', HUD.colour, HUD.fontSize, 0.5, 0.5);
+    } else {
+      this.text(
+        GAME_WIDTH / 2,
+        TITLE.creditY,
+        'PRESS K FOR CREDITS',
+        HUD.colour,
+        HUD.fontSize,
+        0.5,
+        0.5,
+      );
+    }
 
     const go = (): void => this.start();
+    const credits = (): void => this.credits();
     this.input.keyboard?.once('keydown-ENTER', go);
     this.input.keyboard?.once('keydown-SPACE', go);
-    this.input.once(Phaser.Input.Events.POINTER_DOWN, go);
+    this.input.keyboard?.once('keydown-K', credits);
+    this.input.once(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      const onButton =
+        this.touch &&
+        Math.abs(p.x - GAME_WIDTH / 2) <= bw / 2 &&
+        Math.abs(p.y - TITLE.creditY) <= bh / 2;
+      if (onButton) credits();
+      else go();
+    });
   }
 
   snapshot(): TitleSnapshot {
@@ -114,6 +140,12 @@ export class TitleScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.scene.start('Game');
+  }
+
+  private credits(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.scene.start('Credits');
   }
 
   /** Adds centred (originX 0.5) or left-aligned (0) text and records it for the test hook. */
