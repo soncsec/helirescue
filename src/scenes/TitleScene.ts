@@ -4,6 +4,7 @@ import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
 import { addBackdrop, loadArt, makeAnims } from './scenery';
 import { loadSave } from './storage';
+import { applySavedMute, isMuted, loadSounds, play, startMusic, toggleMute } from './sound';
 
 /** Read-only view for the e2e test hook. */
 export interface TitleSnapshot {
@@ -24,6 +25,7 @@ export class TitleScene extends Phaser.Scene {
   private touch = false;
   private highScore = 0;
   private leaving = false;
+  private soundText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super('Title');
@@ -31,13 +33,18 @@ export class TitleScene extends Phaser.Scene {
 
   preload(): void {
     loadArt(this);
+    loadSounds(this);
   }
 
   create(): void {
     this.leaving = false;
+    this.soundText = null;
     this.lines = [];
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches);
     this.highScore = loadSave().highScore;
+    applySavedMute(this);
+    // Starts now, or at the first key press or tap if the browser is still locking sound.
+    startMusic(this);
     makeAnims(this);
     addBackdrop(this, 'night');
     this.add.rectangle(0, SCENERY.groundY, GAME_WIDTH, 16, 0x0b0814).setOrigin(0, 0);
@@ -76,11 +83,13 @@ export class TitleScene extends Phaser.Scene {
           ['X', 'DROP A BOMB'],
           ['C', 'TURN AROUND'],
           ['P / ESC', 'PAUSE'],
+          ['M', this.soundLabel()],
         ];
     controls.forEach(([key, action], i) => {
       const y = TITLE.controlsY + i * TITLE.row;
       this.text(TITLE.keyX, y, key, HUD.colour, HUD.fontSize, 0);
-      this.text(TITLE.actionX, y, action, HUD.colour, HUD.fontSize, 0);
+      const t = this.text(TITLE.actionX, y, action, HUD.colour, HUD.fontSize, 0);
+      if (key === 'M') this.soundText = t;
       this.lines.push(`${key} ${action}`);
     });
 
@@ -97,14 +106,28 @@ export class TitleScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
     });
-    // Credits (owner, 2026-10-19): K on a keyboard (C turns the helicopter), a CREDITS button on touch.
+    // Credits (owner, 2026-10-19): K on a keyboard (C turns the helicopter), a CREDITS button on
+    // touch. Sound (M4): M on a keyboard, a SOUND button on touch.
     const bw = TITLE.creditButtonWidth;
     const bh = TITLE.creditButtonHeight;
+    const creditX = this.touch ? GAME_WIDTH / 2 - TITLE.buttonSpread : GAME_WIDTH / 2;
+    const soundX = GAME_WIDTH / 2 + TITLE.buttonSpread;
     if (this.touch) {
-      this.add
-        .rectangle(GAME_WIDTH / 2, TITLE.creditY, bw, bh, RESULT.panelColour, TITLE.panelAlpha)
-        .setStrokeStyle(2, RESULT.border);
-      this.text(GAME_WIDTH / 2, TITLE.creditY, 'CREDITS', HUD.colour, HUD.fontSize, 0.5, 0.5);
+      for (const x of [creditX, soundX]) {
+        this.add
+          .rectangle(x, TITLE.creditY, bw, bh, RESULT.panelColour, TITLE.panelAlpha)
+          .setStrokeStyle(2, RESULT.border);
+      }
+      this.text(creditX, TITLE.creditY, 'CREDITS', HUD.colour, HUD.fontSize, 0.5, 0.5);
+      this.soundText = this.text(
+        soundX,
+        TITLE.creditY,
+        this.soundLabel(),
+        HUD.colour,
+        HUD.fontSize,
+        0.5,
+        0.5,
+      );
     } else {
       this.text(
         GAME_WIDTH / 2,
@@ -122,12 +145,12 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', go);
     this.input.keyboard?.once('keydown-SPACE', go);
     this.input.keyboard?.once('keydown-K', credits);
-    this.input.once(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
-      const onButton =
-        this.touch &&
-        Math.abs(p.x - GAME_WIDTH / 2) <= bw / 2 &&
-        Math.abs(p.y - TITLE.creditY) <= bh / 2;
-      if (onButton) credits();
+    this.input.keyboard?.on('keydown-M', () => this.toggleSound());
+    const on = (p: Phaser.Input.Pointer, x: number): boolean =>
+      this.touch && Math.abs(p.x - x) <= bw / 2 && Math.abs(p.y - TITLE.creditY) <= bh / 2;
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      if (on(p, soundX)) this.toggleSound();
+      else if (on(p, creditX)) credits();
       else go();
     });
   }
@@ -139,12 +162,29 @@ export class TitleScene extends Phaser.Scene {
   private start(): void {
     if (this.leaving) return;
     this.leaving = true;
+    play(this, 'sfx-select');
     this.scene.start('Game');
+  }
+
+  private soundLabel(): string {
+    return isMuted() ? 'SOUND: OFF' : 'SOUND: ON';
+  }
+
+  /** M or the SOUND button: turns sound on or off (saved) and updates the label. */
+  private toggleSound(): void {
+    toggleMute(this);
+    const label = this.soundLabel();
+    this.soundText?.setText(label);
+    this.lines = this.lines.map((l) =>
+      l.startsWith('SOUND:') ? label : l.startsWith('M SOUND:') ? `M ${label}` : l,
+    );
+    play(this, 'sfx-select');
   }
 
   private credits(): void {
     if (this.leaving) return;
     this.leaving = true;
+    play(this, 'sfx-select');
     this.scene.start('Credits');
   }
 

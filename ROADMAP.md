@@ -12,7 +12,7 @@
 | M1 Art test | Done |
 | M2 Walking skeleton (to production) | Done (2026-10-19) |
 | M3 Mission 1 playable | Done (2026-10-19); landing re-test after the next release |
-| M4 Sound | In progress: M4.1 sources (effects approved; music being chosen) |
+| M4 Sound | Built; waiting for the owner to listen (release) |
 | M5 Missions 2–5 | Not started |
 | M6 Polish and v1.0 release | Not started |
 
@@ -107,10 +107,11 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 
 **Demonstrable result:** rotor, gun, bomb, explosion, boarding and UI sounds plus a music loop; M mutes.
 
-- [ ] M4.1 Sources listed for the owner's approval; generated effects where they fit
+- [x] M4.1 Sources listed for the owner's approval; generated effects where they fit
   - [x] Sound effects: Kenney's CC0 "Sci-fi Sounds" and "Digital SFX" packs, built like Contro (fingerprint-checked download; OGG plus an M4A copy for iPhone) (owner, 2026-10-19)
-  - [ ] Music: one CC0 loop by ansimuz, different from Contro's; the owner picks from candidates
-- [ ] M4.2 Sound starts on the first key press or tap; mute, remembered in the saved-data key (H9)
+  - [x] Music: "Dark Happy World" by ansimuz (CC0), picked by the owner from three candidates (2026-10-19)
+  - [x] `tools/audio/build_audio.py` builds 18 sounds as Ogg and M4A (1.97 MB in all) from the SHA-256-checked packs and writes the CREDITS.md table; the repo check enforces the 3 MB budget
+- [x] M4.2 Sound starts on the first key press or tap; mute, remembered in the saved-data key (H9): M on a keyboard, a SOUND button on the touch title and pause screens; a rotor hum that follows the helicopter, and a sound for every game event
 
 **Acceptance criteria:** every sound plays in Chrome and Firefox; every licence is recorded; audio under 3 MB.
 

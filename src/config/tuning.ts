@@ -360,17 +360,19 @@ export const TITLE = {
   row: 14,
   keyX: 120,
   actionX: 290,
-  highY: 176,
-  startY: 196,
+  highY: 190,
+  startY: 208,
   /** The CREDITS prompt (keyboard) or button (touch) along the bottom. */
   creditY: 246,
   creditButtonWidth: 96,
   creditButtonHeight: 18,
+  /** On touch, CREDITS and SOUND sit this far either side of the centre. */
+  buttonSpread: 60,
   /** Start prompt blink, ms. */
   blinkMs: 600,
   /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
   panelTop: 82,
-  panelBottom: 212,
+  panelBottom: 222,
   panelWidth: 300,
   panelAlpha: 0.8,
 } as const;
@@ -391,7 +393,10 @@ export const CREDITS_SCREEN = {
 /** Pause panel (src/scenes/PauseScene.ts), in game pixels. */
 export const PAUSE = {
   panelWidth: 240,
-  panelHeight: 72,
+  panelHeight: 96,
+  /** The SOUND button on touch screens. */
+  buttonWidth: 120,
+  buttonHeight: 18,
 } as const;
 
 export const CAMERA = {

@@ -4,6 +4,7 @@ import type { CreditsScene, CreditsSnapshot } from '../scenes/CreditsScene';
 import { GameScene, type GameSnapshot } from '../scenes/GameScene';
 import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
 import type { TitleScene, TitleSnapshot } from '../scenes/TitleScene';
+import { isMuted, soundLog } from '../scenes/sound';
 
 /**
  * Test-only hook for Playwright (ADR-006). It is loaded only in the e2e build
@@ -32,6 +33,12 @@ export interface TestHook {
   pauseShowing(): boolean;
   /** The credits screen's text, while it is showing. */
   credits(): CreditsSnapshot | null;
+  /**
+   * Sound (M4): muted or not, how many times each sound has started, which
+   * sounds are loaded, and whether the music is playing (or waiting for the
+   * browser to allow sound).
+   */
+  sound(): { muted: boolean; log: Record<string, number>; loaded: string[]; music: boolean };
   /**
    * How long each game update took, in ms, most recent last (M3.7 frame-time
    * budget): the game's own work per frame, without the browser's drawing.
@@ -89,6 +96,15 @@ export function installTestHook(game: Phaser.Game): void {
       return s && game.scene.isActive('Title') ? s.snapshot() : null;
     },
     pauseShowing: () => game.scene.isActive('Pause'),
+    sound: () => {
+      const music = game.sound.get('music');
+      return {
+        muted: isMuted(),
+        log: { ...soundLog } as Record<string, number>,
+        loaded: game.cache.audio.getKeys(),
+        music: music !== null && (music.isPlaying || game.sound.locked),
+      };
+    },
     credits: () => {
       const s = game.scene.getScene('Credits') as CreditsScene | null;
       return s && game.scene.isActive('Credits') ? s.snapshot() : null;
