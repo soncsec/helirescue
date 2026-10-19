@@ -9,7 +9,8 @@ the files named here (never running anything from the packs), and with ffmpeg (a
 tool; nothing new ships in the game) writes for every sound:
   - <key>.ogg (Ogg Vorbis), and
   - <key>.m4a (AAC), for iPhone Safari.
-Sound effects are made mono to stay inside the 3 MB audio budget (PROJECT.md).
+Everything is made mono at 22.05 kHz: light to decode on phones, and well inside the 3 MB
+audio budget (PROJECT.md).
 Sources approved by the owner on 2026-10-19 (the same Kenney packs as Contro; the music was
 chosen by the owner from three ansimuz candidates).
 """
@@ -59,12 +60,15 @@ SOUNDS = {
     "music": ("dark-happy-world.zip", "dark-happy-world/dark-happy-world.ogg", "music"),
 }
 
-# ffmpeg settings per kind: channels, Vorbis quality, AAC bitrate.
+# ffmpeg settings per kind: channels, Vorbis quality, AAC bitrate. Everything is mono at
+# 22.05 kHz: browsers decode each sound to raw samples when the game loads, and the 96 s
+# music track in stereo at 48 kHz decoded to about 37 MB, a heavy spike on phones.
 ENCODE = {
-    "sfx": ("1", "2", "64k"),
-    "loop": ("1", "2", "64k"),
-    "music": ("2", "1", "64k"),
+    "sfx": ("1", "3", "48k"),
+    "loop": ("1", "3", "48k"),
+    "music": ("1", "3", "64k"),
 }
+RATE = "22050"
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -78,7 +82,8 @@ def sha256(path: pathlib.Path) -> str:
 def encode(src: pathlib.Path, dst: pathlib.Path, kind: str) -> None:
     channels, quality, bitrate = ENCODE[kind]
     codec = ["-c:a", "libvorbis", "-q:a", quality] if dst.suffix == ".ogg" else ["-c:a", "aac", "-b:a", bitrate]
-    cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vn", "-map_metadata", "-1", "-ac", channels, *codec, str(dst)]
+    cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vn", "-map_metadata", "-1", "-ac", channels,
+           "-ar", RATE, *codec, str(dst)]
     subprocess.run(cmd, check=True)
 
 
@@ -86,7 +91,7 @@ def credits_table() -> str:
     rows = ["| File | Source | Changes |", "|---|---|---|"]
     for key, (zip_name, inner, kind) in SOUNDS.items():
         page, author, licence, _ = PACKS[zip_name]
-        mono = "mono, " if ENCODE[kind][0] == "1" else ""
+        mono = "mono 22 kHz, " if ENCODE[kind][0] == "1" else ""
         for ext, what in (("ogg", "re-encoded to Ogg Vorbis"), ("m4a", "AAC (M4A) copy for iPhone Safari")):
             rows.append(f"| `assets/audio/{key}.{ext}` | [{zip_name}]({page}) `{inner}` by {author}, {licence} | {mono}{what} |")
     return "\n".join(rows)

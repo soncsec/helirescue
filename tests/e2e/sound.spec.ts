@@ -9,6 +9,9 @@ import { openGame, openTitle } from './helpers';
  * browsers can't be listened to, so these check what the game plays.
  */
 
+/** Generous: WebKit under the full suite's load can take seconds to handle a key press. */
+const WAIT = { timeout: 20_000 };
+
 const sound = (page: Page) => page.evaluate(() => window.__game?.sound() ?? null);
 
 test('every sound loads, and the music starts', async ({ page }) => {
@@ -18,6 +21,10 @@ test('every sound loads, and the music starts', async ({ page }) => {
   });
   page.on('pageerror', (e) => errors.push(e.message));
   await openTitle(page);
+  // The music loads in the background after the title shows.
+  await expect
+    .poll(async () => (await sound(page))?.loaded.length)
+    .toBe(Object.keys(SOUNDS).length);
   const s = await sound(page);
   expect(s?.loaded.sort()).toEqual(Object.keys(SOUNDS).sort());
   expect(s?.muted).toBe(false);
@@ -54,7 +61,7 @@ test('M turns sound off and on, and the choice is remembered', async ({ page }) 
   test.slow();
   await openTitle(page);
   await page.keyboard.press('m');
-  await expect.poll(async () => (await sound(page))?.muted).toBe(true);
+  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(true);
   expect((await page.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(
     'M SOUND: OFF',
   );
@@ -76,7 +83,7 @@ test('M turns sound off and on, and the choice is remembered', async ({ page }) 
   expect((await sound(page))?.log['sfx-gun'] ?? 0).toBe(0);
   // M in the game turns it back on.
   await page.keyboard.press('m');
-  await expect.poll(async () => (await sound(page))?.muted).toBe(false);
+  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(false);
 });
 
 test('the pause screen shows the sound setting and M changes it', async ({ page }) => {
@@ -84,7 +91,7 @@ test('the pause screen shows the sound setting and M changes it', async ({ page 
   await page.keyboard.press('p');
   await expect.poll(() => page.evaluate(() => window.__game?.pauseShowing() ?? false)).toBe(true);
   await page.keyboard.press('m');
-  await expect.poll(async () => (await sound(page))?.muted).toBe(true);
+  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(true);
   // Still paused: M doesn't resume.
   expect(await page.evaluate(() => window.__game?.pauseShowing() ?? false)).toBe(true);
 });
@@ -108,7 +115,7 @@ test('on a phone, the SOUND button on the title turns sound off', async ({
     box.x + (GAME_WIDTH / 2 + TITLE.buttonSpread) * zoom,
     box.y + TITLE.creditY * zoom,
   );
-  await expect.poll(async () => (await sound(page))?.muted).toBe(true);
+  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(true);
   // Still on the title: the button doesn't start the game.
   expect(await page.evaluate(() => window.__game?.scene() ?? null)).toBe('Title');
   expect((await page.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(

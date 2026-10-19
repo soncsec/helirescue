@@ -28,10 +28,26 @@ function setMuted(scene: Phaser.Scene, value: boolean): void {
   scene.sound.mute = value;
 }
 
+/** Loads the sound effects with the scene; the music loads later (see ensureMusic). */
 export function loadSounds(scene: Phaser.Scene): void {
   for (const key of Object.keys(SOUNDS) as SoundKey[]) {
-    if (!scene.cache.audio.exists(key)) scene.load.audio(key, soundFiles(key));
+    if (key !== 'music' && !scene.cache.audio.exists(key)) scene.load.audio(key, soundFiles(key));
   }
+}
+
+/**
+ * Starts the music, loading it first in the background if needed, so the
+ * title shows without waiting for it. Called from the title and the game, in
+ * case the player starts before it has loaded.
+ */
+export function ensureMusic(scene: Phaser.Scene): void {
+  if (scene.cache.audio.exists('music')) {
+    startMusic(scene);
+    return;
+  }
+  scene.load.audio('music', soundFiles('music'));
+  scene.load.once('filecomplete-audio-music', () => startMusic(scene));
+  scene.load.start();
 }
 
 /** Plays a one-off sound effect at its set volume (silent while muted). */

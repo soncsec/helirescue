@@ -44,9 +44,13 @@ export const game = new Phaser.Game({
 
 // Landscape only on touch devices: in portrait, pause and ask for a turn.
 const rotateNote = document.getElementById('rotate-note');
+/** False until the first screen exists: pausing the loop earlier would also stop the loader. */
+let started = false;
+
 function applyOrientation(): void {
   const portrait = touch && isPortrait(matches);
   if (rotateNote) rotateNote.hidden = !portrait;
+  if (!started) return;
   if (portrait) game.pause();
   else game.resume();
 }
@@ -59,7 +63,15 @@ function applyWindow(): void {
 
 window.addEventListener('resize', applyWindow);
 window.matchMedia('(orientation: portrait)').addEventListener('change', applyWindow);
-game.events.once(Phaser.Core.Events.READY, applyOrientation);
+// The note shows at once; the pause waits until the first screen has been created.
+game.events.once(Phaser.Core.Events.READY, () => {
+  applyOrientation();
+  const first = game.scene.getScenes(false)[0];
+  first?.events.once(Phaser.Scenes.Events.CREATE, () => {
+    started = true;
+    applyOrientation();
+  });
+});
 
 // The e2e build adds a test hook. Vite replaces MODE at build time, so this
 // branch and the hook module are left out of the normal build entirely.

@@ -4,7 +4,7 @@ import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
 import { addBackdrop, loadArt, makeAnims } from './scenery';
 import { loadSave } from './storage';
-import { applySavedMute, isMuted, loadSounds, play, startMusic, toggleMute } from './sound';
+import { applySavedMute, ensureMusic, isMuted, loadSounds, play, toggleMute } from './sound';
 
 /** Read-only view for the e2e test hook. */
 export interface TitleSnapshot {
@@ -43,8 +43,9 @@ export class TitleScene extends Phaser.Scene {
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches);
     this.highScore = loadSave().highScore;
     applySavedMute(this);
-    // Starts now, or at the first key press or tap if the browser is still locking sound.
-    startMusic(this);
+    // Loads in the background, then starts (or at the first key press or tap if the
+    // browser is still locking sound).
+    ensureMusic(this);
     makeAnims(this);
     addBackdrop(this, 'night');
     this.add.rectangle(0, SCENERY.groundY, GAME_WIDTH, 16, 0x0b0814).setOrigin(0, 0);

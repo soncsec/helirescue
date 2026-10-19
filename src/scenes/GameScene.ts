@@ -92,7 +92,7 @@ import {
 import type { HudState } from './HudScene';
 import type { ResultData } from './ResultScene';
 import { loadSave, storeSave } from './storage';
-import { loadSounds, play, toggleMute } from './sound';
+import { ensureMusic, loadSounds, play, toggleMute } from './sound';
 import { SOUNDS } from '../config/audio';
 
 /** Read-only view of the game state, used by the e2e test hook. */
@@ -285,6 +285,7 @@ export class GameScene extends Phaser.Scene {
     this.makeEnemies();
     this.makeSquad();
     this.startRotor();
+    ensureMusic(this);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
       ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
