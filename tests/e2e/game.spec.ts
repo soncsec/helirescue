@@ -161,6 +161,7 @@ test('the HUD shows the rescue status and groups wait on roofs across the city',
     aboard: 0,
     capacity: 10,
     score: 0,
+    lives: 3,
   });
   expect(s.people).toHaveLength(16);
   expect(s.people.every((p) => p.mode === 'waiting')).toBe(true);

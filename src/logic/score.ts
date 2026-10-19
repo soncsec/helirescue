@@ -64,6 +64,19 @@ export function missionResult(
   return { saved, lost, total, rescue, bonus, perfect, score: rescue + bonus + perfect };
 }
 
+/** Game over: the points for the people saved so far, with no mission bonus. */
+export function gameOverResult(
+  saved: number,
+  lost: number,
+  total: number,
+  t: ScoringTuning,
+): MissionResult {
+  count(lost, 'lost');
+  if (saved + lost > total) throw new RangeError('saved + lost cannot exceed total');
+  const rescue = rescueScore(saved, t);
+  return { saved, lost, total, rescue, bonus: 0, perfect: 0, score: rescue };
+}
+
 /** A mission ends when every person is saved or lost (scope). */
 export function missionOver(t: { total: number; saved: number; lost: number }): boolean {
   return t.total > 0 && t.saved + t.lost >= t.total;

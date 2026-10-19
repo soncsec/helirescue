@@ -10,6 +10,7 @@ import {
   HUD,
   LANDING,
   LANDING_FX,
+  LIVES,
   PEOPLE,
   PLAYER,
   SAVE,
@@ -39,7 +40,8 @@ import {
 import { wantsTouch } from '../logic/device';
 import { createRng } from '../logic/rng';
 import type { TouchState } from '../logic/touch';
-import { missionOver, missionResult, rescueScore } from '../logic/score';
+import { afterCrash } from '../logic/lives';
+import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
 import { recordScore } from '../logic/save';
 import { roofOf, roofUnder, type Roof } from '../logic/world';
 import { MISSION_1 } from '../missions/mission1';
@@ -115,6 +117,10 @@ export class GameScene extends Phaser.Scene {
   private touch: TouchState | null = null;
   /** True once the mission has ended and the result screen is up. */
   private over = false;
+  /** Helicopters left, including the one flying. */
+  private lives: number = LIVES.perMission;
+  /** Seconds since the last helicopter crashed; null while any are left. */
+  private wreckedFor: number | null = null;
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
@@ -132,6 +138,8 @@ export class GameScene extends Phaser.Scene {
     this.seed = seedFromUrl();
     this.heliEvents = [];
     this.over = false;
+    this.lives = LIVES.perMission;
+    this.wreckedFor = null;
     const rng = createRng(this.seed);
     const { theme, width } = this.map;
     const { groundY } = SCENERY;
@@ -210,14 +218,22 @@ export class GameScene extends Phaser.Scene {
     const before = this.heli;
     const dt = deltaMs / 1000;
     this.world = { ...this.world, people: blockers(this.people, PEOPLE) };
-    const { heli, event } = updateHeli(before, axis, dt, this.world, RULES);
+    // With no helicopters left the wreck stays down: no respawn.
+    const { heli, event } =
+      this.wreckedFor === null
+        ? updateHeli(before, axis, dt, this.world, RULES)
+        : { heli: before, event: { kind: 'none' } as const };
     this.heli = heli;
     if (event.kind !== 'none') this.onEvent(event);
     const moved = updatePeople(this.people, heli, dt, this.hutDoorX, PEOPLE);
     this.people = moved.people;
     for (const e of moved.events) this.onPeopleEvent(e);
     this.drawPeople();
-    if (!this.over && missionOver(tally(this.people))) this.endMission();
+    if (!this.over && missionOver(tally(this.people))) this.endMission('complete');
+    if (!this.over && this.wreckedFor !== null) {
+      this.wreckedFor += dt;
+      if (this.wreckedFor >= LIVES.gameOverSeconds) this.endMission('gameover');
+    }
     if (heli.facing !== before.facing) this.lookAhead();
     this.draw(axis);
     scrollBackdrop(this.layers, this.cameras.main.scrollX);
@@ -259,6 +275,7 @@ export class GameScene extends Phaser.Scene {
       aboard: t.aboard,
       capacity: PEOPLE.capacity,
       score: rescueScore(t.saved, SCORING),
+      lives: this.lives,
     };
   }
 
@@ -277,14 +294,32 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  /** Every person is saved or lost: freeze the game and show the result. */
-  private endMission(): void {
+  /**
+   * Test hook only (e2e build): crashes the helicopter where it is, through
+   * the same path as a real crash, so lives and game over can be tested
+   * without diving into roofs. Not reachable in the player build.
+   */
+  crashForTest(): void {
+    if (this.heli.mode === 'crashed') return;
+    this.heli = { ...this.heli, mode: 'crashed', health: 0, on: null, crashedFor: 0 };
+    this.onEvent({ kind: 'crashed' });
+  }
+
+  /**
+   * The mission is over: everyone saved or lost ('complete'), or no
+   * helicopters left ('gameover'). Freeze the game and show the result.
+   */
+  private endMission(kind: ResultData['kind']): void {
     this.over = true;
     const t = tally(this.people);
-    const result = missionResult(t.saved, t.lost, t.total, SCORING);
+    const result =
+      kind === 'complete'
+        ? missionResult(t.saved, t.lost, t.total, SCORING)
+        : gameOverResult(t.saved, t.lost, t.total, SCORING);
     const { data, isNew } = recordScore(loadSave(), result.score, SAVE);
     if (isNew) storeSave(data);
     const show: ResultData = {
+      kind,
       result,
       highScore: data.highScore,
       newHigh: isNew,
@@ -341,6 +376,9 @@ export class GameScene extends Phaser.Scene {
     if (event.kind === 'hard-landing') {
       this.cameras.main.shake(LANDING_FX.shakeMs, LANDING_FX.shakeStrength);
     } else if (event.kind === 'crashed') {
+      const { left, gameOver } = afterCrash(this.lives);
+      this.lives = left;
+      if (gameOver) this.wreckedFor = 0;
       this.cameras.main.shake(LANDING_FX.shakeMs * 2, LANDING_FX.shakeStrength * 2);
       this.boom
         .setPosition(f.x, f.y + HELI_SHAPE.bottom)
