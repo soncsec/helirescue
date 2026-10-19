@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { ArtScene, ArtSnapshot } from '../scenes/ArtScene';
-import type { GameScene, GameSnapshot } from '../scenes/GameScene';
+import { GameScene, type GameSnapshot } from '../scenes/GameScene';
 import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
 import type { TitleScene, TitleSnapshot } from '../scenes/TitleScene';
 
@@ -29,6 +29,36 @@ export interface TestHook {
   title(): TitleSnapshot | null;
   /** True while the pause screen is showing. */
   pauseShowing(): boolean;
+  /**
+   * How long each game update took, in ms, most recent last (M3.7 frame-time
+   * budget): the game's own work per frame, without the browser's drawing.
+   */
+  updateTimes(): number[];
+  resetUpdateTimes(): void;
+}
+
+/** Recent GameScene.update durations, in ms. */
+const updateTimes: number[] = [];
+const KEEP = 5000;
+
+/**
+ * Times every GameScene update (e2e build only; the player build never loads
+ * this file). Wraps the method once, on the class, so restarts are timed too.
+ */
+function timeUpdates(): void {
+  const proto = GameScene.prototype as unknown as {
+    update: (time: number, delta: number) => void;
+    __timed?: boolean;
+  };
+  if (proto.__timed) return;
+  const original = proto.update;
+  proto.update = function timed(this: GameScene, time: number, delta: number): void {
+    const start = performance.now();
+    original.call(this, time, delta);
+    updateTimes.push(performance.now() - start);
+    if (updateTimes.length > KEEP) updateTimes.shift();
+  };
+  proto.__timed = true;
 }
 
 declare global {
@@ -38,6 +68,7 @@ declare global {
 }
 
 export function installTestHook(game: Phaser.Game): void {
+  timeUpdates();
   window.__game = {
     scene: () => game.scene.getScenes(true)[0]?.scene.key ?? null,
     snapshot: () => {
@@ -55,6 +86,10 @@ export function installTestHook(game: Phaser.Game): void {
       return s && game.scene.isActive('Title') ? s.snapshot() : null;
     },
     pauseShowing: () => game.scene.isActive('Pause'),
+    updateTimes: () => [...updateTimes],
+    resetUpdateTimes: () => {
+      updateTimes.length = 0;
+    },
     crash: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
       s?.crashForTest();
