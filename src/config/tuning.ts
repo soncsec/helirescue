@@ -147,6 +147,38 @@ export const ENEMIES = {
   blastRadius: 24,
 } as const;
 
+/**
+ * Soldiers (roadmap M3.6, src/logic/soldiers.ts). First values, to tune after
+ * the owner's play-test. The soldier sprite is 75x48 with the feet on the
+ * bottom row and the rifle about 20 px in front.
+ */
+export const SOLDIERS = {
+  walkSpeed: 18,
+  range: 180,
+  reloadMin: 1.4,
+  reloadMax: 2.4,
+  firstShot: 1,
+  shootPose: 0.3,
+  muzzleX: 22,
+  muzzleY: 26,
+  shotSpeed: 170,
+  shotLife: 1.6,
+  maxShots: 6,
+  halfWidth: 9,
+  height: 34,
+  /** Matches PEOPLE (12 px wide, 26 tall). */
+  personHalfWidth: PEOPLE.halfWidth,
+  personHeight: PEOPLE.height,
+  downSeconds: 0.6,
+  hitStep: 4,
+  /** A bomb takes down soldiers within this distance of the blast. */
+  blastRadius: 28,
+  /** Sprite frames (first, last) in soldier.png: run, shoot, fall. */
+  frames: { run: [0, 9], shoot: [10, 11], down: [12, 14] },
+  /** Their shots reuse the bullet sprite, tinted red. */
+  shotTint: 0xff6a5a,
+} as const;
+
 /** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
 export const EFFECTS = {
   sparks: 8,

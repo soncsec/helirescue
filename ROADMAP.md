@@ -11,7 +11,7 @@
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
 | M2 Walking skeleton (to production) | In progress: M2.7 rescue e2e and touch release (first release live since 2026-10-18) |
-| M3 Mission 1 playable | In progress: M3.6 enemies (M3.4 play-test pending) |
+| M3 Mission 1 playable | In progress: M3.7 frame-rate check (M3.4 play-test pending) |
 | M4 Sound | Not started |
 | M5 Missions 2–5 | Not started |
 | M6 Polish and v1.0 release | Not started |
@@ -95,9 +95,10 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 - [x] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
   - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards
   - [x] Forward gun (Z or Space, held) and bombs (X) with pooled shots and effects; FIRE and BOMB touch buttons; Claude-made bullet, bomb and spark sprites
-- [ ] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
+- [x] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
   - [x] Anti-aircraft guns: aim at the helicopter, fire pooled flak (seeded timing) that takes its health and can crash it; 3 bullet hits or a bomb destroy them; 2 in mission 1
-  - [ ] Soldiers on rooftops and in the street who shoot at people running to the helicopter
+  - [x] Soldiers on rooftops and in the street who shoot at people running to the helicopter (leading their target; a hit person is lost); one bullet or a bomb takes them down; 3 in mission 1
+- [ ] M3.7 Frame-rate check for the acceptance criterion "steady 60 fps" (added 2026-10-19: no task covered it). Headless test browsers here render at only 5 to 38 fps, so the method needs the owner's approval first
 
 **Acceptance criteria:** mission 1 can be won or lost; scoring and saved-data rules are unit tested; an e2e test plays a scripted rescue on desktop and with touch; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test, once without enemies (after M3.4) and once with.
 

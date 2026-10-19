@@ -56,6 +56,28 @@ export function sameRoof(a: Roof | null, b: Roof | null): boolean {
   return !!a && !!b && a.left === b.left && a.right === b.right && a.y === b.y;
 }
 
+/** People out in the open, where soldiers shoot at them: running to the helicopter or climbing in. */
+export function exposed(p: Person): boolean {
+  return p.mode === 'running' || p.mode === 'boarding';
+}
+
+/**
+ * A person hit by a soldier: lost (they fall over and vanish; no blood).
+ * Only exposed people can be hit; anyone else is left as they are.
+ */
+export function shootPerson(
+  people: readonly Person[],
+  id: number,
+): { people: Person[]; event: PeopleEvent | null } {
+  let event: PeopleEvent | null = null;
+  const next = people.map((p) => {
+    if (p.id !== id || !exposed(p)) return p;
+    event = { kind: 'lost', id };
+    return { ...p, mode: 'lost' as const, roof: null };
+  });
+  return { people: next, event };
+}
+
 /** People inside the helicopter, including those queued to get out. */
 export function inHeli(p: Person): boolean {
   return p.mode === 'boarding' || p.mode === 'aboard' || (p.mode === 'unloading' && p.timer < 0);

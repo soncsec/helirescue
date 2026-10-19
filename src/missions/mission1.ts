@@ -32,6 +32,12 @@ export const MISSION_1: WorldMap = {
   // Two anti-aircraft guns on tall roofs with nobody on them (M3.6): one
   // guarding the middle groups, one the far end.
   aaGuns: [{ x: 938 }, { x: 1618 }],
+  // Three soldiers (M3.6): two in the street beside groups, one on a low roof.
+  soldiers: [
+    { x: 860, patrol: 14 },
+    { x: 1212, patrol: 14 },
+    { x: 1290, patrol: 18 },
+  ],
   // Each group's last person stands 8 px in from the roof's right edge.
   people: [...g(452, 3), ...g(786, 4), ...g(1152, 3), ...g(1482, 3), ...g(1848, 3)],
 };
