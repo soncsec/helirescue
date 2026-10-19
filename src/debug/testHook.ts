@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { ArtScene, ArtSnapshot } from '../scenes/ArtScene';
 import type { GameScene, GameSnapshot } from '../scenes/GameScene';
+import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
 
 /**
  * Test-only hook for Playwright (ADR-006). It is loaded only in the e2e build
@@ -17,6 +18,10 @@ export interface TestHook {
   art(): ArtSnapshot | null;
   /** True while the game is paused (portrait on a touch device). */
   paused(): boolean;
+  /** The result screen's contents, while it is showing. */
+  result(): ResultSnapshot | null;
+  /** Settles the mission: the first `saved` people saved, the next `lost` lost. */
+  settle(saved: number, lost: number): void;
 }
 
 declare global {
@@ -34,6 +39,14 @@ export function installTestHook(game: Phaser.Game): void {
     },
     hudActive: () => game.scene.isActive('Hud'),
     paused: () => game.isPaused,
+    result: () => {
+      const s = game.scene.getScene('Result') as ResultScene | null;
+      return s && game.scene.isActive('Result') ? s.snapshot() : null;
+    },
+    settle: (saved, lost) => {
+      const s = game.scene.getScene('Game') as GameScene | null;
+      s?.settleForTest(saved, lost);
+    },
     art: () => {
       const s = game.scene.getScene('Art') as ArtScene | null;
       return s && game.scene.isActive('Art') ? s.snapshot() : null;
