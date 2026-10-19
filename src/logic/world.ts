@@ -33,6 +33,10 @@ export interface WorldLimits {
   minSky: number;
   /** People stand at least this far in from a roof edge. */
   personMargin: number;
+  /** Clear stretch a roof with people must keep, so the helicopter can land beside them. */
+  landingRoom: number;
+  /** Roof taken up by one person either side of their x. */
+  personHalfWidth: number;
 }
 
 /** A flat roof surface: where the helicopter can land and people wait. */
@@ -73,10 +77,26 @@ export function roofUnder(world: WorldMap, x: number, limits: WorldLimits): Roof
   return b ? roofOf(b, limits) : null;
 }
 
+/** A group of `count` people standing in a row from x, `gap` pixels apart. */
+export function group(x: number, count: number, gap: number): { x: number }[] {
+  return Array.from({ length: count }, (_, i) => ({ x: x + i * gap }));
+}
+
+/** The widest stretch of `roof` not taken up by people standing at `xs`. */
+export function clearStretch(roof: Roof, xs: readonly number[], halfWidth: number): number {
+  let widest = 0;
+  let from = roof.left;
+  for (const x of [...xs].sort((a, b) => a - b)) {
+    widest = Math.max(widest, x - halfWidth - from);
+    from = Math.max(from, x + halfWidth);
+  }
+  return Math.max(widest, roof.right - from);
+}
+
 /**
  * Lists everything wrong with a map: too narrow, buildings outside the level,
- * overlapping each other or the base, too tall to fly over, or people not
- * standing on a building roof.
+ * overlapping each other or the base, too tall to fly over, people not
+ * standing on a building roof, or a group leaving no room to land beside it.
  * Returns an empty list when the map is valid.
  */
 export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
@@ -109,6 +129,13 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
     if (!r) problems.push(`person ${i} is not on a building roof`);
     else if (p.x < r.left + limits.personMargin || p.x > r.right - limits.personMargin) {
       problems.push(`person ${i} is too close to the roof edge`);
+    }
+  });
+  world.buildings.forEach((b, i) => {
+    const r = roofOf(b, limits);
+    const xs = world.people.map((p) => p.x).filter((x) => x >= r.left && x <= r.right);
+    if (xs.length > 0 && clearStretch(r, xs, limits.personHalfWidth) < limits.landingRoom) {
+      problems.push(`building ${i} has no room to land beside its people`);
     }
   });
   return problems;

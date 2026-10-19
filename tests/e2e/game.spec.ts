@@ -33,6 +33,8 @@ async function snapshot(page: Page): Promise<GameSnapshot> {
  * real-time speed.
  */
 const MOVE = { timeout: 40_000 };
+/** Flight level well clear of every roof, for tests that fly across the city. */
+const CLEAR_Y = 40;
 
 async function openGame(page: Page, query = ''): Promise<void> {
   await page.goto(`./${query}`);
@@ -64,9 +66,10 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
   expect(start.player.y).toBeLessThan(base?.y ?? -Infinity);
   expect(start.worldWidth).toBeGreaterThan(960);
 
-  // Climb above the rooftops first, so the buildings don't block the way.
+  // Climb well above the rooftops first, so the buildings don't block the way
+  // (the tallest mission 1 roof is at y 94; it sinks slowly while drifting).
   await page.keyboard.down('ArrowUp');
-  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(70);
+  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(CLEAR_Y);
   await page.keyboard.up('ArrowUp');
 
   await page.keyboard.down('ArrowRight');
@@ -88,7 +91,7 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
   await page.keyboard.down('ArrowUp');
   await expect
     .poll(async () => (await snapshot(page)).player.y, MOVE)
-    .toBeLessThan(before.player.y - 10);
+    .toBeLessThan(Math.min(before.player.y - 10, CLEAR_Y));
   await page.keyboard.up('ArrowUp');
 
   await page.keyboard.down('ArrowLeft');
@@ -145,21 +148,28 @@ test('flying low into a building stops at its wall', async ({ page }) => {
   expect(s.health).toBe(100);
 });
 
-test('the HUD shows the rescue status and a person waits on a far roof', async ({ page }) => {
+test('the HUD shows the rescue status and groups wait on roofs across the city', async ({
+  page,
+}) => {
   await openGame(page);
   const s = await snapshot(page);
   expect(s.hud).toEqual({
     health: 100,
     maxHealth: 100,
     saved: 0,
-    total: 1,
+    total: 16,
     aboard: 0,
     capacity: 10,
     score: 0,
   });
-  expect(s.people).toHaveLength(1);
-  expect(s.people[0]?.mode).toBe('waiting');
-  expect(s.people[0]?.x).toBeGreaterThan(960); // beyond the first two screens
+  expect(s.people).toHaveLength(16);
+  expect(s.people.every((p) => p.mode === 'waiting')).toBe(true);
+  const roofsWithPeople = s.roofs.filter((r) =>
+    s.people.some((p) => p.x >= r.left && p.x <= r.right),
+  );
+  expect(roofsWithPeople.length).toBeGreaterThanOrEqual(4);
+  expect(roofsWithPeople.every((r) => !r.base)).toBe(true);
+  expect(Math.max(...s.people.map((p) => p.x))).toBeGreaterThan(3 * 480); // into the fourth screen
   expect(await page.evaluate(() => window.__game?.hudActive() ?? false)).toBe(true);
 });
 

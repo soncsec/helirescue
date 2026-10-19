@@ -79,6 +79,8 @@ export const PEOPLE = {
   boardReach: 4,
   boardSeconds: 0.3,
   capacity: 10,
+  /** Space between people standing in a group on a roof, px. */
+  groupGap: 12,
   unloadGap: 0.6,
   height: 26,
   halfWidth: 6,
@@ -152,6 +154,15 @@ export const WORLD_LIMITS = {
   minSky: 80,
   /** People stand at least this far in from a roof edge. */
   personMargin: 8,
+  /**
+   * A roof with people keeps a stretch this wide clear of them, so the
+   * helicopter can land beside the group facing either way (the skids reach
+   * further in front than behind, and facing flips the span), plus 32 px so
+   * landing there is not fiddly.
+   */
+  landingRoom: 2 * Math.max(HELI_SHAPE.skidBack, HELI_SHAPE.skidFront) + 32,
+  /** How much of the roof one person takes up either side of their x. */
+  personHalfWidth: PEOPLE.halfWidth,
 } as const;
 
 /** Camera follow (H1). */
