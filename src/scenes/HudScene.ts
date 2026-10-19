@@ -12,11 +12,14 @@ export interface HudState {
   aboard: number;
   capacity: number;
   score: number;
+  /** Helicopters left, including the one flying. */
+  lives: number;
 }
 
 /**
  * Heads-up display in its own scene on top of the game, so camera shake and
- * scrolling never move it. Along the top: health bar, SAVED, ABOARD, SCORE.
+ * scrolling never move it. Along the top: health bar, SAVED, ABOARD, SCORE;
+ * under the bar, the helicopters left.
  * On touch devices it also holds the on-screen D-pad (touchControls.ts).
  */
 export class HudScene extends Phaser.Scene {
@@ -24,6 +27,7 @@ export class HudScene extends Phaser.Scene {
   private saved!: Phaser.GameObjects.Text;
   private aboard!: Phaser.GameObjects.Text;
   private score!: Phaser.GameObjects.Text;
+  private lives!: Phaser.GameObjects.Text;
   private read: () => HudState | null = () => null;
   private touch: TouchState | null = null;
 
@@ -45,6 +49,7 @@ export class HudScene extends Phaser.Scene {
     this.saved = this.text(HUD.savedX);
     this.aboard = this.text(HUD.aboardX);
     this.score = this.text(HUD.scoreRight).setOrigin(1, 0);
+    this.lives = this.text(HUD.livesX, HUD.livesY);
   }
 
   override update(): void {
@@ -56,11 +61,12 @@ export class HudScene extends Phaser.Scene {
     this.saved.setText(`SAVED ${s.saved}/${s.total}`);
     this.aboard.setText(`ABOARD ${s.aboard}/${s.capacity}`);
     this.score.setText(`SCORE ${s.score}`);
+    this.lives.setText(`HELI x${s.lives}`);
   }
 
-  private text(x: number): Phaser.GameObjects.Text {
+  private text(x: number, y: number = HUD.textY): Phaser.GameObjects.Text {
     return this.add
-      .text(x, HUD.textY, '', {
+      .text(x, y, '', {
         fontFamily: HUD.font,
         fontSize: `${HUD.fontSize}px`,
         color: HUD.colour,

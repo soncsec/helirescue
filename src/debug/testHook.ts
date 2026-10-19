@@ -22,6 +22,8 @@ export interface TestHook {
   result(): ResultSnapshot | null;
   /** Settles the mission: the first `saved` people saved, the next `lost` lost. */
   settle(saved: number, lost: number): void;
+  /** Crashes the helicopter where it is (a real crash: uses up a helicopter). */
+  crash(): void;
 }
 
 declare global {
@@ -42,6 +44,10 @@ export function installTestHook(game: Phaser.Game): void {
     result: () => {
       const s = game.scene.getScene('Result') as ResultScene | null;
       return s && game.scene.isActive('Result') ? s.snapshot() : null;
+    },
+    crash: () => {
+      const s = game.scene.getScene('Game') as GameScene | null;
+      s?.crashForTest();
     },
     settle: (saved, lost) => {
       const s = game.scene.getScene('Game') as GameScene | null;

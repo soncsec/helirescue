@@ -4,6 +4,8 @@ import type { MissionResult } from '../logic/score';
 
 /** What the game scene hands the result screen. */
 export interface ResultData {
+  /** Everyone saved or lost, or no helicopters left. */
+  kind: 'complete' | 'gameover';
   result: MissionResult;
   highScore: number;
   newHigh: boolean;
@@ -17,9 +19,10 @@ export interface ResultSnapshot extends ResultData {
 }
 
 /**
- * The end of a mission (roadmap M3.2): a panel over the paused game with the
- * people saved, the points, the bonus, the score and the high score. Enter,
- * Space or a tap plays the mission again. The title screen comes in M3.4.
+ * The end of a mission (roadmap M3.2, M3.3): a panel over the paused game
+ * with the people saved, the points, the bonus, the score and the high score;
+ * or GAME OVER when no helicopters are left. Enter, Space or a tap plays the
+ * mission again (Retry). The title screen comes in M3.4.
  */
 export class ResultScene extends Phaser.Scene {
   private data_!: ResultData;
@@ -36,7 +39,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { result: r, highScore, newHigh, touch } = this.data_;
+    const { kind, result: r, highScore, newHigh, touch } = this.data_;
     const R = RESULT;
     this.add
       .rectangle(
@@ -49,23 +52,31 @@ export class ResultScene extends Phaser.Scene {
       )
       .setStrokeStyle(2, R.border);
 
-    const perfect = r.lost === 0;
-    const rows: [string, string, (string | undefined)?][] = [
-      [perfect ? 'PERFECT RESCUE!' : 'MISSION COMPLETE', '', HUD.accent],
+    const over = kind === 'gameover';
+    const title = over ? 'GAME OVER' : r.lost === 0 ? 'PERFECT RESCUE!' : 'MISSION COMPLETE';
+    const action = over ? 'RETRY' : 'PLAY AGAIN';
+    const high = newHigh ? `NEW! ${highScore}` : `${highScore}`;
+    type Row = [string, string, (string | undefined)?];
+    const middle: Row[] = over
+      ? [
+          ['NO HELICOPTERS LEFT', ''],
+          ['', ''],
+        ]
+      : [
+          ['BONUS', `${r.bonus}`],
+          ['PERFECT', `${r.perfect}`],
+        ];
+    const rows: Row[] = [
+      [title, '', over ? RESULT.danger : HUD.accent],
       ['', ''],
       ['SAVED', `${r.saved}/${r.total}`],
       ['LOST', `${r.lost}`],
       ['RESCUE', `${r.rescue}`],
-      ['BONUS', `${r.bonus}`],
-      ['PERFECT', `${r.perfect}`],
+      ...middle,
       ['SCORE', `${r.score}`, HUD.accent],
-      [
-        'HIGH SCORE',
-        newHigh ? `NEW! ${highScore}` : `${highScore}`,
-        newHigh ? HUD.accent : undefined,
-      ],
+      ['HIGH SCORE', high, newHigh ? HUD.accent : undefined],
       ['', ''],
-      [touch ? 'TAP TO PLAY AGAIN' : 'PRESS ENTER TO PLAY AGAIN', ''],
+      [touch ? `TAP TO ${action}` : `PRESS ENTER TO ${action}`, ''],
     ];
     this.lines = [];
     rows.forEach(([label, value, colour], i) => {

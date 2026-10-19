@@ -98,6 +98,16 @@ export const SCORING = {
   perfectBonus: 500,
 } as const;
 
+/** Helicopters per mission (scope, owner 2026-10-18; src/logic/lives.ts). */
+export const LIVES = {
+  perMission: 3,
+  /**
+   * After the last crash, how long the wreck shows before the game-over
+   * screen: longer than a respawn takes, so it is plain that none comes.
+   */
+  gameOverSeconds: 2.5,
+} as const;
+
 /** Saved data checks (H9, src/logic/save.ts). */
 export const SAVE = {
   /** Highest believable score; a stored value above it counts as corrupt. */
@@ -113,6 +123,8 @@ export const RESULT = {
   panelColour: 0x140f1f,
   panelAlpha: 0.92,
   border: 0xf0821e,
+  /** GAME OVER title colour. */
+  danger: '#e0503a',
   /** Text rows: first row's top, row spacing, and the label and number columns. */
   top: 50,
   row: 16,
@@ -157,6 +169,9 @@ export const HUD = {
   textY: 4,
   savedX: 80,
   aboardX: 184,
+  /** Helicopters left: under the health bar. */
+  livesX: 6,
+  livesY: 14,
   scoreRight: 474,
   /** "+100" popup when someone is saved: rise (px) and duration (ms). */
   popupRise: 18,

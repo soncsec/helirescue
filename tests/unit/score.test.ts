@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { SCORING } from '../../src/config/tuning';
-import { missionBonus, missionOver, missionResult, rescueScore } from '../../src/logic/score';
+import {
+  gameOverResult,
+  missionBonus,
+  missionOver,
+  missionResult,
+  rescueScore,
+} from '../../src/logic/score';
 
 const t = { perPerson: 100, missionBonus: 1000, perfectBonus: 500 };
 
@@ -55,6 +61,24 @@ describe('missionResult', () => {
   it('rejects more saved and lost than there are people', () => {
     expect(() => missionResult(10, 7, 16, t)).toThrow(RangeError);
     expect(() => missionResult(1, -1, 16, t)).toThrow(RangeError);
+  });
+});
+
+describe('gameOverResult', () => {
+  it('scores the people saved so far, with no bonus', () => {
+    expect(gameOverResult(5, 2, 16, t)).toEqual({
+      saved: 5,
+      lost: 2,
+      total: 16,
+      rescue: 500,
+      bonus: 0,
+      perfect: 0,
+      score: 500,
+    });
+  });
+
+  it('rejects impossible counts', () => {
+    expect(() => gameOverResult(10, 7, 16, t)).toThrow(RangeError);
   });
 });
 
