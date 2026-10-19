@@ -29,6 +29,9 @@ export const MISSION_1: WorldMap = {
     { x: 1570, width: 6, height: 10, damage: 0.3, helipad: false },
     { x: 1720, width: 10, height: 6, damage: 0.2, helipad: true }, // roof 1720..1880
   ],
+  // Two anti-aircraft guns on tall roofs with nobody on them (M3.6): one
+  // guarding the middle groups, one the far end.
+  aaGuns: [{ x: 938 }, { x: 1618 }],
   // Each group's last person stands 8 px in from the roof's right edge.
   people: [...g(452, 3), ...g(786, 4), ...g(1152, 3), ...g(1482, 3), ...g(1848, 3)],
 };

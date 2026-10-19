@@ -120,10 +120,39 @@ export const WEAPONS = {
   hitStep: 4,
 } as const;
 
+/**
+ * Enemies (roadmap M3.6, src/logic/enemies.ts). First values, to tune after the
+ * owner's play-test: about 7 flak hits crash the helicopter.
+ */
+export const ENEMIES = {
+  aaRange: 200,
+  aaReloadMin: 2,
+  aaReloadMax: 3,
+  /** A short grace period before a gun's first shot. */
+  firstShot: 1.5,
+  aaHp: 3,
+  /** Hit box of the turret sprite (50x32, drawn standing on the roof). */
+  gunHalfWidth: 18,
+  gunHeight: 24,
+  muzzleY: 22,
+  flakSpeed: 150,
+  flakLife: 2,
+  flakDamage: 15,
+  maxFlak: 8,
+  /** About the helicopter's body, smaller than the sprite so near misses miss. */
+  heliHalfWidth: 26,
+  heliHalfHeight: 12,
+  hitStep: 4,
+  /** A bomb destroys a gun whose hit box is within this distance of the blast. */
+  blastRadius: 24,
+} as const;
+
 /** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
 export const EFFECTS = {
   sparks: 8,
   blasts: 4,
+  /** Small puffs where flak bursts. */
+  bursts: 6,
   /** Camera shake when a bomb goes off: duration (ms) and strength. */
   blastShakeMs: 120,
   blastShake: 0.004,

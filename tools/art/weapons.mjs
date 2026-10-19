@@ -3,6 +3,8 @@
 // Writes bullet.png (2 frames, 8x4: a flickering tracer, pointing right),
 // bomb.png (1 frame, 8x12: nose down) and spark.png (4 frames, 12x12: a
 // bullet hitting a wall). Bomb blasts use the pack's explosion.
+// Enemy fire (M3.6): flak.png (2 frames, 6x6: a glowing shell) and burst.png
+// (4 frames, 16x16: a dark puff where flak bursts).
 import { Grid, sheet, save } from './lib.mjs';
 
 export const PALETTE = [
@@ -15,8 +17,11 @@ export const PALETTE = [
   '#2a2838', // 6 dark metal
   '#4d4f63', // 7 metal
   '#8c90a6', // 8 light metal
+  '#e03a3c', // 9 red
+  '#3a3550', // 10 smoke dark
+  '#6b6585', // 11 smoke
 ];
-const [, K, HW, Y, O, OD, D, M, L] = PALETTE.map((_, i) => i);
+const [, K, HW, Y, O, OD, D, M, L, R, SD, S] = PALETTE.map((_, i) => i);
 
 function bullet(frame) {
   const g = new Grid(8, 4);
@@ -83,12 +88,43 @@ function spark(frame) {
   return g;
 }
 
+function flak(frame) {
+  const g = new Grid(6, 6);
+  g.ellipse(2.5, 2.5, 2.5, 2.5, frame ? O : R);
+  g.ellipse(2.5, 2.5, 1.2, 1.2, frame ? HW : Y);
+  return g;
+}
+
+function burst(frame) {
+  const g = new Grid(16, 16);
+  const r = [3, 5, 6.5, 7][frame] ?? 7;
+  g.ellipse(7.5, 7.5, r, r, frame < 2 ? S : SD);
+  if (frame === 0) g.ellipse(7.5, 7.5, 1.6, 1.6, Y);
+  if (frame === 1) g.ellipse(7.5, 7.5, 2.5, 2.5, O);
+  if (frame === 3) {
+    // Thinning out: three small puffs drifting apart.
+    const puffs = new Grid(16, 16);
+    for (const [x, y, pr] of [
+      [4, 5, 2.6],
+      [11, 6, 2.2],
+      [7.5, 11, 2],
+    ])
+      puffs.ellipse(x, y, pr, pr, SD);
+    return puffs;
+  }
+  return g;
+}
+
 const dir = process.argv[2] ?? 'tools/art/out';
 save(`${dir}/bullet.png`, sheet([bullet(0), bullet(1)]), PALETTE);
 save(`${dir}/bomb.png`, bomb(), PALETTE);
 save(`${dir}/spark.png`, sheet([0, 1, 2, 3].map(spark)), PALETTE);
+save(`${dir}/flak.png`, sheet([flak(0), flak(1)]), PALETTE);
+save(`${dir}/burst.png`, sheet([0, 1, 2, 3].map(burst)), PALETTE);
 if (process.argv.includes('--preview')) {
   save(`${dir}/preview/bullet-x8.png`, sheet([bullet(0), bullet(1)]), PALETTE, 8);
   save(`${dir}/preview/bomb-x8.png`, bomb(), PALETTE, 8);
   save(`${dir}/preview/spark-x8.png`, sheet([0, 1, 2, 3].map(spark)), PALETTE, 8);
+  save(`${dir}/preview/burst-x8.png`, sheet([0, 1, 2, 3].map(burst)), PALETTE, 8);
+  save(`${dir}/preview/flak-x8.png`, sheet([flak(0), flak(1)]), PALETTE, 8);
 }

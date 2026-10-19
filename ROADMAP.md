@@ -96,6 +96,8 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
   - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards
   - [x] Forward gun (Z or Space, held) and bombs (X) with pooled shots and effects; FIRE and BOMB touch buttons; Claude-made bullet, bomb and spark sprites
 - [ ] M3.6 Soldiers on rooftops and in the street who shoot at people; anti-aircraft guns that shoot at the helicopter
+  - [x] Anti-aircraft guns: aim at the helicopter, fire pooled flak (seeded timing) that takes its health and can crash it; 3 bullet hits or a bomb destroy them; 2 in mission 1
+  - [ ] Soldiers on rooftops and in the street who shoot at people running to the helicopter
 
 **Acceptance criteria:** mission 1 can be won or lost; scoring and saved-data rules are unit tested; an e2e test plays a scripted rescue on desktop and with touch; steady 60 fps in the frame-rate check; the owner approves the feel after a play-test, once without enemies (after M3.4) and once with.
 
