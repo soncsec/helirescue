@@ -33,6 +33,16 @@ export interface LandingTuning {
   landingZone: number;
   /** Seconds after a crash before a new helicopter appears at base. */
   respawnSeconds: number;
+  /**
+   * Flare (owner, 2026-10-19): within this height over a landing spot the
+   * helicopter slows its own descent to flareSpeed, so holding Down lands gently.
+   */
+  flareZone: number;
+  flareSpeed: number;
+  /** Touching down moving sideways faster than this (px/s) is a hard landing. */
+  safeSideSpeed: number;
+  /** Health lost per px/s of sideways speed above safeSideSpeed. */
+  sideDamagePerSpeed: number;
 }
 
 /** Something the helicopter may not land on: a person, standing on a surface. */
@@ -123,6 +133,35 @@ export function span(x: number, facing: 1 | -1, back: number, front: number): [n
 /** Damage for touching down at `speed`: none up to safeSpeed, then linear. */
 export function landingDamage(speed: number, t: LandingTuning): number {
   return speed <= t.safeSpeed ? 0 : Math.ceil((speed - t.safeSpeed) * t.damagePerSpeed);
+}
+
+/** Damage for touching down while moving sideways at `vx`: none up to safeSideSpeed. */
+export function sideDamage(vx: number, t: LandingTuning): number {
+  const speed = Math.abs(vx);
+  return speed <= t.safeSideSpeed ? 0 : Math.ceil((speed - t.safeSideSpeed) * t.sideDamagePerSpeed);
+}
+
+/**
+ * The flare: over a spot it could land on, within flareZone, the descent is
+ * held to flareSpeed (owner, 2026-10-19). Returns the flight unchanged elsewhere.
+ */
+export function flare(
+  prev: FlightState,
+  next: FlightState,
+  facing: 1 | -1,
+  dt: number,
+  world: HeliWorld,
+  rules: HeliRules,
+): FlightState {
+  const t = rules.landing;
+  if (next.vy <= t.flareSpeed) return next;
+  const bottom = next.y + rules.shape.bottom;
+  const skids = span(next.x, facing, rules.shape.skidBack, rules.shape.skidFront);
+  const over = world.surfaces.some(
+    (s) => s.y >= bottom - next.vy * dt && s.y - bottom <= t.flareZone && supports(s, skids),
+  );
+  if (!over) return next;
+  return { ...next, vy: t.flareSpeed, y: Math.min(next.y, prev.y + t.flareSpeed * dt) };
 }
 
 /** True when both skids would rest on this surface. */
@@ -233,12 +272,19 @@ export function updateHeli(
   }
 
   const facing: 1 | -1 = turn ? (h.facing === 1 ? -1 : 1) : h.facing;
-  const next = fly(h.flight, input, dt, rules.flight, world.bounds);
+  const next = flare(
+    h.flight,
+    fly(h.flight, input, dt, rules.flight, world.bounds),
+    facing,
+    dt,
+    world,
+    rules,
+  );
   const s = settle(h.flight, next, facing, world, rules.shape);
 
   if (s.touched) {
     const speed = s.flight.vy;
-    const damage = landingDamage(speed, rules.landing);
+    const damage = landingDamage(speed, rules.landing) + sideDamage(s.flight.vx, rules.landing);
     const health = Math.max(0, h.health - damage);
     const rest: FlightState = {
       x: s.flight.x,

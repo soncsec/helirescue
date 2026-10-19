@@ -62,6 +62,7 @@ tools/docs-page/       builds the docs page from the four docs
 - **Decision:** pure TypeScript state machines. Helicopter: flying, landing, landed, crashed. Person: waiting, running, boarding, aboard, unloading, saved, lost. Safe and hard landing thresholds live in `tuning.ts`.
 - **Alternatives:** rules written inside the Phaser scene (hard to test).
 - **Tradeoffs:** these rules decide score and fairness, so they get unit tests; scenes only draw the states.
+- **Amended 2026-10-19 (owner's play-test):** within `flareZone` of a landing spot the descent is capped at `flareSpeed` (under the safe speed), so holding Down lands gently; a hard landing comes from touching down faster sideways than `safeSideSpeed`.
 
 ### H4: Missions as data — *Accepted 2026-10-18*
 

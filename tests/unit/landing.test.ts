@@ -27,6 +27,10 @@ const landing = {
   damagePerSpeed: 0.6,
   landingZone: 16,
   respawnSeconds: 2,
+  flareZone: 40,
+  flareSpeed: 30,
+  safeSideSpeed: 30,
+  sideDamagePerSpeed: 0.4,
 };
 const rules: HeliRules = { flight: FLIGHT, landing, shape };
 
@@ -136,24 +140,50 @@ describe('safe landing', () => {
 });
 
 describe('hard landing', () => {
-  it('costs health in proportion to the speed over the safe limit', () => {
-    const fast = heliAt(250, roof.y - shape.bottom - 1, 90);
-    const r = updateHeli(fast, down, 1 / 60, world, rules);
-    expect(r.event.kind).toBe('hard-landing');
+  it('touching down still moving sideways costs health in proportion to that speed', () => {
+    // 120 px/s sideways: (120 - 30) x 0.4 = 36.
+    const sliding = heliAt(240, roof.y - shape.bottom - 0.2, 20, 120);
+    const r = updateHeli(sliding, right, 1 / 60, world, rules);
+    expect(r.event).toMatchObject({ kind: 'hard-landing' });
     expect(r.heli.mode).toBe('landed');
-    expect(r.heli.health).toBeLessThan(100);
-    expect(r.heli.health).toBeGreaterThan(50);
+    expect(100 - r.heli.health).toBeGreaterThanOrEqual(34);
+    expect(100 - r.heli.health).toBeLessThanOrEqual(37);
   });
 
-  it('happens when diving onto a roof with down held', () => {
+  it('touching down slowly sideways is safe', () => {
+    const r = updateHeli(
+      heliAt(250, roof.y - shape.bottom - 0.2, 20, 25),
+      none,
+      1 / 60,
+      world,
+      rules,
+    );
+    expect(r.event.kind).toBe('landed');
+    expect(r.heli.health).toBe(100);
+  });
+
+  it('holding Down lands gently: the flare slows the descent near the roof (owner, 2026-10-19)', () => {
     const { heli, events } = run(heliAt(250, 40), down, 5, world, (h) => h.mode === 'landed');
-    expect(events).toEqual(['hard-landing']);
-    expect(heli.health).toBeLessThan(100);
+    expect(events).toEqual(['landed']);
+    expect(heli.health).toBe(100);
+  });
+
+  it('dives fast high up, and flares only near a landing spot', () => {
+    const high = run(heliAt(250, 30), down, 0.6).heli;
+    expect(high.flight.vy).toBeGreaterThan(landing.flareSpeed);
+    const near = updateHeli(
+      heliAt(250, roof.y - shape.bottom - 20, 90),
+      down,
+      1 / 60,
+      world,
+      rules,
+    );
+    expect(near.heli.flight.vy).toBe(landing.flareSpeed);
   });
 
   it('crashes when health runs out, then respawns at base after a delay', () => {
-    const weak = { ...heliAt(250, roof.y - shape.bottom - 1, 90), health: 5 };
-    const r = updateHeli(weak, down, 1 / 60, world, rules);
+    const weak = { ...heliAt(240, roof.y - shape.bottom - 0.2, 20, 150), health: 5 };
+    const r = updateHeli(weak, right, 1 / 60, world, rules);
     expect(r.event).toEqual({ kind: 'crashed' });
     expect(r.heli.mode).toBe('crashed');
     expect(r.heli.health).toBe(0);
