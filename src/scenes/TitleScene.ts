@@ -16,7 +16,7 @@ const SIDE = sheetSpec('heli-side');
 
 /**
  * Title screen (roadmap M3.4): the name, what to do, the controls for this
- * device and the high score. Enter, Space or a tap starts mission 1; C or the
+ * device and the high score. Enter, Space or a tap starts mission 1; K or the
  * CREDITS button opens the credits (CreditsScene).
  */
 export class TitleScene extends Phaser.Scene {
@@ -97,7 +97,7 @@ export class TitleScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
     });
-    // Credits (owner, 2026-10-19): C on a keyboard, a CREDITS button on touch.
+    // Credits (owner, 2026-10-19): K on a keyboard (C turns the helicopter), a CREDITS button on touch.
     const bw = TITLE.creditButtonWidth;
     const bh = TITLE.creditButtonHeight;
     if (this.touch) {
@@ -109,7 +109,7 @@ export class TitleScene extends Phaser.Scene {
       this.text(
         GAME_WIDTH / 2,
         TITLE.creditY,
-        'PRESS C FOR CREDITS',
+        'PRESS K FOR CREDITS',
         HUD.colour,
         HUD.fontSize,
         0.5,
@@ -121,7 +121,7 @@ export class TitleScene extends Phaser.Scene {
     const credits = (): void => this.credits();
     this.input.keyboard?.once('keydown-ENTER', go);
     this.input.keyboard?.once('keydown-SPACE', go);
-    this.input.keyboard?.once('keydown-C', credits);
+    this.input.keyboard?.once('keydown-K', credits);
     this.input.once(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       const onButton =
         this.touch &&

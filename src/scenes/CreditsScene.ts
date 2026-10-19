@@ -10,7 +10,7 @@ export interface CreditsSnapshot {
 
 /**
  * The credits (owner, 2026-10-19), opened from the title screen: every art
- * source with its licence, in full for the CC-BY gun. Esc, Enter, Space, C or
+ * source with its licence, in full for the CC-BY gun. Esc, Enter, Space, K or
  * a tap goes back to the title.
  */
 export class CreditsScene extends Phaser.Scene {
@@ -48,7 +48,7 @@ export class CreditsScene extends Phaser.Scene {
     );
 
     const back = (): void => this.back();
-    for (const key of ['ESC', 'ENTER', 'SPACE', 'C'])
+    for (const key of ['ESC', 'ENTER', 'SPACE', 'K'])
       this.input.keyboard?.once(`keydown-${key}`, back);
     this.input.once(Phaser.Input.Events.POINTER_DOWN, back);
   }

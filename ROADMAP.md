@@ -91,7 +91,7 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 - [x] M3.3 3 helicopters, game over, and Retry of the current mission: HELI xN under the health bar; the last wreck stays down, then GAME OVER with the points so far (no bonus); Retry restarts the mission with 3 helicopters
 - [ ] M3.4 Title screen (controls summary, CC-BY art credit) and pause (key, and on focus loss); the owner play-tests the winnable mission
   - [x] Title screen with the controls for the device, the high score and the CC-BY credit; pause with P or Esc, a touch pause button, and on focus loss (PR #19)
-  - [x] CREDITS screen from the title (C, or a touch button) with the full CC-BY attribution, replacing the credit line on the title (owner, 2026-10-19)
+  - [x] CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, replacing the credit line on the title (owner, 2026-10-19)
   - [ ] The owner play-tests mission 1 (after a release with the owner's approval)
 - [x] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
   - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards

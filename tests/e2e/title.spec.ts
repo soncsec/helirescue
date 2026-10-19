@@ -29,7 +29,7 @@ test('the title shows the name, the keyboard controls, the high score and the cr
       'P / ESC PAUSE',
       'HIGH SCORE 0',
       'PRESS ENTER TO START',
-      'PRESS C FOR CREDITS',
+      'PRESS K FOR CREDITS',
     ]),
   );
   expect(errors).toEqual([]);
@@ -76,9 +76,9 @@ test('on a phone the title shows the touch controls, and a tap starts the game',
   await context.close();
 });
 
-test('C opens the credits with the full CC-BY attribution; Esc goes back', async ({ page }) => {
+test('K opens the credits with the full CC-BY attribution; Esc goes back', async ({ page }) => {
   await openTitle(page);
-  await page.keyboard.press('c');
+  await page.keyboard.press('k');
   await expect.poll(() => scene(page)).toBe('Credits');
   const lines = (await page.evaluate(() => window.__game?.credits() ?? null))?.lines ?? [];
   const text = lines.join('\n');
