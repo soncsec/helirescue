@@ -11,6 +11,8 @@ import {
   LANDING,
   LANDING_FX,
   LIVES,
+  EFFECTS,
+  WEAPONS,
   PEOPLE,
   PLAYER,
   SAVE,
@@ -41,6 +43,14 @@ import { wantsTouch } from '../logic/device';
 import { createRng } from '../logic/rng';
 import type { TouchState } from '../logic/touch';
 import { afterCrash } from '../logic/lives';
+import {
+  flying,
+  newWeapons,
+  updateWeapons,
+  type Arena,
+  type WeaponEvent,
+  type Weapons,
+} from '../logic/weapons';
 import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
 import { recordScore } from '../logic/save';
 import { roofOf, roofUnder, type Roof } from '../logic/world';
@@ -71,11 +81,23 @@ export interface GameSnapshot {
   health: number;
   /** The roof (or street) it is landed on, or null. */
   on: Roof | null;
-  /** Every helicopter and people event so far, oldest first (at most 50). */
-  events: (HeliEvent['kind'] | PeopleEvent['kind'])[];
+  /** Every helicopter and people event so far, plus bomb drops and blasts, oldest first (at most 50). */
+  events: (HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast')[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
   seed: number;
+  /** Shots flying now, totals so far, and how many game objects exist (pooling: it stays flat). */
+  weapons: {
+    bullets: number;
+    bombs: number;
+    fired: number;
+    dropped: number;
+    impacts: number;
+    blasts: number;
+    objects: number;
+    /** The shots flying now. */
+    shots: { kind: 'bullet' | 'bomb'; x: number; y: number; vx: number }[];
+  };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
   /** Left edge of the camera view in the world. */
@@ -87,7 +109,7 @@ export interface GameSnapshot {
 }
 
 type Keys = Record<
-  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd',
+  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'z' | 'space',
   Phaser.Input.Keyboard.Key
 >;
 
@@ -115,6 +137,17 @@ export class GameScene extends Phaser.Scene {
   private keys!: Keys;
   /** C was pressed since the last frame. */
   private turnPressed = false;
+  /** X was pressed since the last frame. */
+  private bombPressed = false;
+  /** The gun and bombs: a fixed pool of shots, one sprite per slot. */
+  private weapons!: Weapons;
+  private shotSprites: Phaser.GameObjects.Sprite[] = [];
+  /** Pooled effects, reused in turn. */
+  private sparks: Phaser.GameObjects.Sprite[] = [];
+  private blasts: Phaser.GameObjects.Sprite[] = [];
+  private nextSpark = 0;
+  private nextBlast = 0;
+  private shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0 };
   /** Written by the HUD scene's D-pad; null on keyboard devices. */
   private touch: TouchState | null = null;
   /** True once the mission has ended and the result screen is up. */
@@ -190,9 +223,10 @@ export class GameScene extends Phaser.Scene {
 
     this.sprite = this.add.sprite(spawn.x, spawn.y, SIDE.key).play(SIDE.key);
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
+    this.makeWeapons();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
-      ? { axis: { x: 0, y: 0 }, pause: false, turn: false }
+      ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
       : null;
     this.scene.launch('Hud', { read: (): HudState | null => this.hudState(), touch: this.touch });
 
@@ -212,7 +246,13 @@ export class GameScene extends Phaser.Scene {
       a: 'A',
       s: 'S',
       d: 'D',
+      z: 'Z',
+      space: 'SPACE',
     }) as Keys;
+    this.bombPressed = false;
+    kb.on('keydown-X', () => {
+      this.bombPressed = true;
+    });
     // A press is recorded as it happens: a quick tap can come and go between
     // frames, which Phaser's JustDown would miss.
     this.turnPressed = false;
@@ -261,6 +301,16 @@ export class GameScene extends Phaser.Scene {
         : { heli: before, event: { kind: 'none' } as const };
     this.heli = heli;
     if (event.kind !== 'none') this.onEvent(event);
+    const shots = updateWeapons(
+      this.weapons,
+      heli,
+      { fire: this.readFire(), bomb: this.readBomb() },
+      dt,
+      this.arena(),
+      WEAPONS,
+    );
+    for (const e of shots) this.onWeaponEvent(e);
+    this.drawShots();
     const moved = updatePeople(this.people, heli, dt, this.hutDoorX, PEOPLE);
     this.people = moved.people;
     for (const e of moved.events) this.onPeopleEvent(e);
@@ -289,6 +339,15 @@ export class GameScene extends Phaser.Scene {
       people: this.people.map((p) => ({ id: p.id, mode: p.mode, x: p.x, y: p.y })),
       hud: this.hudState(),
       seed: this.seed,
+      weapons: {
+        bullets: flying(this.weapons, 'bullet'),
+        bombs: flying(this.weapons, 'bomb'),
+        ...this.shotCounts,
+        objects: this.children.length,
+        shots: this.weapons.shots
+          .filter((s) => s.alive)
+          .map((s) => ({ kind: s.kind, x: s.x, y: s.y, vx: s.vx })),
+      },
       input: {
         touch: this.touch !== null,
         touchAxis: { ...(this.touch?.axis ?? { x: 0, y: 0 }) },
@@ -445,6 +504,75 @@ export class GameScene extends Phaser.Scene {
   /** Keeps more of the view ahead of the helicopter than behind it. */
   private lookAhead(): void {
     this.cameras.main.setFollowOffset(-CAMERA.lookAhead * this.heli.facing, 0);
+  }
+
+  /** Builds the shot pool and one sprite per slot, plus the effect pools (all hidden). */
+  private makeWeapons(): void {
+    this.weapons = newWeapons(WEAPONS);
+    this.shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0 };
+    this.shotSprites = this.weapons.shots.map((s) =>
+      s.kind === 'bullet'
+        ? this.add.sprite(0, 0, 'bullet').play('bullet').setVisible(false)
+        : this.add.sprite(0, 0, 'bomb', 0).setVisible(false),
+    );
+    const effect = (key: string): Phaser.GameObjects.Sprite => {
+      const fx = this.add.sprite(0, 0, key).setVisible(false).setDepth(2);
+      fx.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.setVisible(false));
+      return fx;
+    };
+    this.sparks = Array.from({ length: EFFECTS.sparks }, () => effect('spark'));
+    this.blasts = Array.from({ length: EFFECTS.blasts }, () => effect('explosion'));
+    this.nextSpark = 0;
+    this.nextBlast = 0;
+  }
+
+  /** What shots can hit: every building (the base too) and the street. */
+  private arena(): Arena {
+    return { buildings: this.roofs, groundY: this.world.groundY, width: this.map.width };
+  }
+
+  private onWeaponEvent(e: WeaponEvent): void {
+    if (e.kind === 'fired') this.shotCounts.fired++;
+    else if (e.kind === 'dropped') {
+      this.shotCounts.dropped++;
+      this.log('dropped');
+    } else if (e.kind === 'impact') {
+      this.shotCounts.impacts++;
+      const fx = this.sparks[this.nextSpark++ % this.sparks.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
+    } else {
+      this.shotCounts.blasts++;
+      this.log('blast');
+      const fx = this.blasts[this.nextBlast++ % this.blasts.length];
+      fx?.setPosition(e.x, e.y)
+        .setOrigin(0.5, 0.8)
+        .setVisible(true)
+        .play({ key: 'explosion', repeat: 0 });
+      this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
+    }
+  }
+
+  /** Shows each pooled sprite where its shot is, or hides it. */
+  private drawShots(): void {
+    this.weapons.shots.forEach((s, i) => {
+      const sprite = this.shotSprites[i];
+      if (!sprite) return;
+      sprite.setVisible(s.alive);
+      if (s.alive) sprite.setPosition(s.x, s.y).setFlipX(s.vx < 0);
+    });
+  }
+
+  /** Fire is held: Z, Space, or the touch FIRE button. */
+  private readFire(): boolean {
+    return this.keys.z.isDown || this.keys.space.isDown || (this.touch?.fire ?? false);
+  }
+
+  /** One bomb per press of X or the touch BOMB button. */
+  private readBomb(): boolean {
+    const pressed = this.bombPressed || (this.touch?.bomb ?? false);
+    this.bombPressed = false;
+    if (this.touch) this.touch.bomb = false;
+    return pressed;
   }
 
   /** One turn per press of C or the touch Turn button. */

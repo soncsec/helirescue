@@ -66,11 +66,15 @@ export class TitleScene extends Phaser.Scene {
     const controls: [string, string][] = this.touch
       ? [
           ['D-PAD', 'FLY'],
+          ['FIRE', 'SHOOT (HOLD)'],
+          ['BOMB', 'DROP A BOMB'],
           ['TURN', 'TURN AROUND'],
           ['II', 'PAUSE'],
         ]
       : [
           ['ARROWS / WASD', 'FLY'],
+          ['Z / SPACE', 'SHOOT (HOLD)'],
+          ['X', 'DROP A BOMB'],
           ['C', 'TURN AROUND'],
           ['P / ESC', 'PAUSE'],
         ];

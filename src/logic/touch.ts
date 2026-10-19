@@ -20,6 +20,10 @@ export interface TouchState {
   pause: boolean;
   /** Set by the Turn button; the game scene clears it when it turns. */
   turn: boolean;
+  /** True while a finger holds the FIRE button. */
+  fire: boolean;
+  /** Set by the BOMB button; the game scene clears it when it drops one. */
+  bomb: boolean;
 }
 
 /** True when a touch at offset (dx, dy) from a round button's centre presses it. */

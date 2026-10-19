@@ -15,12 +15,13 @@ const DIRECTIONS: { x: 1 | -1 | 0; y: 1 | -1 | 0 }[] = [
  * On-screen D-pad for phones and tablets (roadmap M2.6), drawn in the HUD
  * scene's bottom-left corner. One finger takes hold of the pad and steers
  * until it lifts; the rules are in src/logic/touch.ts. A pause button sits
- * top right, and the Turn button bottom right for the right thumb. Fire and
- * Bomb join it with the weapons (M3.5).
+ * top right, and FIRE (held), BOMB and TURN bottom right for the right thumb.
  */
 export class TouchControls {
   private readonly pad: Phaser.GameObjects.Graphics;
   private pointerId: number | null = null;
+  /** The finger holding FIRE, if any. */
+  private firePointer: number | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -44,6 +45,8 @@ export class TouchControls {
       .fillRect(-5, -6, 3, 12)
       .fillRect(2, -6, 3, 12);
     this.button(TOUCH.buttons.turn);
+    this.button(TOUCH.buttons.fire);
+    this.button(TOUCH.buttons.bomb);
     const input = scene.input;
     input.on(PE.POINTER_DOWN, this.onDown, this);
     input.on(PE.POINTER_MOVE, this.onMove, this);
@@ -63,9 +66,18 @@ export class TouchControls {
       this.state.pause = true;
       return;
     }
-    const t = TOUCH.buttons.turn;
-    if (buttonHit(p.x - t.x, p.y - t.y, t.r)) {
+    const { turn, fire, bomb } = TOUCH.buttons;
+    if (buttonHit(p.x - turn.x, p.y - turn.y, turn.r)) {
       this.state.turn = true;
+      return;
+    }
+    if (buttonHit(p.x - bomb.x, p.y - bomb.y, bomb.r)) {
+      this.state.bomb = true;
+      return;
+    }
+    if (buttonHit(p.x - fire.x, p.y - fire.y, fire.r)) {
+      this.firePointer = p.id;
+      this.state.fire = true;
       return;
     }
     if (this.pointerId !== null) return;
@@ -101,6 +113,11 @@ export class TouchControls {
   }
 
   private onUp(p: Phaser.Input.Pointer): void {
+    if (p.id === this.firePointer) {
+      this.firePointer = null;
+      this.state.fire = false;
+      return;
+    }
     if (p.id !== this.pointerId) return;
     this.pointerId = null;
     this.set(0, 0);

@@ -98,6 +98,37 @@ export const SCORING = {
   perfectBonus: 500,
 } as const;
 
+/**
+ * Forward gun and bombs (roadmap M3.5, src/logic/weapons.ts). First values,
+ * to tune after the owner's play-test.
+ */
+export const WEAPONS = {
+  /** Bullets: just over a screen of range (360 px/s for 1.4 s, about 500 px). */
+  bulletSpeed: 360,
+  bulletLife: 1.4,
+  /** About 6 shots a second while Fire is held. */
+  fireEvery: 0.16,
+  /** The nose of the side-view sprite (108x48), from its centre. */
+  noseX: 40,
+  noseY: 6,
+  maxBullets: 12,
+  bombGravity: 420,
+  bombEvery: 0.6,
+  maxBombs: 3,
+  /** Between the skids, just under the body. */
+  dropY: 20,
+  hitStep: 4,
+} as const;
+
+/** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
+export const EFFECTS = {
+  sparks: 8,
+  blasts: 4,
+  /** Camera shake when a bomb goes off: duration (ms) and strength. */
+  blastShakeMs: 120,
+  blastShake: 0.004,
+} as const;
+
 /** Helicopters per mission (scope, owner 2026-10-18; src/logic/lives.ts). */
 export const LIVES = {
   perMission: 3,
@@ -237,7 +268,6 @@ export const TOUCH = {
   /**
    * Round buttons for the right thumb (scope: Fire, Bomb and Turn), centre and
    * radius. Fire is the biggest, in the corner; Bomb to its left; Turn above.
-   * Turn arrives first (M3.5); Fire and Bomb with the weapons.
    */
   buttons: {
     fire: { x: GAME_WIDTH - 44, y: GAME_HEIGHT - 48, r: 28, label: 'FIRE' },
@@ -257,15 +287,15 @@ export const TITLE = {
   row: 14,
   keyX: 120,
   actionX: 290,
-  highY: 148,
-  startY: 170,
+  highY: 176,
+  startY: 196,
   /** The CC-BY art credit along the bottom. */
   creditY: 256,
   /** Start prompt blink, ms. */
   blinkMs: 600,
   /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
   panelTop: 82,
-  panelBottom: 192,
+  panelBottom: 212,
   panelWidth: 300,
   panelAlpha: 0.8,
 } as const;
