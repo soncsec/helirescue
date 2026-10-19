@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 6181;
 const isCI = Boolean(process.env['CI']);
+/** Timing tests, run on their own (see the perf-* projects). */
+const PERF = /frameBudget\.spec\.ts/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -16,10 +18,30 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: PERF },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: PERF },
     // WebKit is the engine behind Safari and every iPhone and iPad browser.
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: PERF },
+    // The frame-time budget (M3.7) is measured on a quiet machine: after every
+    // other test, one browser at a time, so other browsers' work isn't timed.
+    {
+      name: 'perf-chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: PERF,
+      dependencies: ['chromium', 'firefox', 'webkit'],
+    },
+    {
+      name: 'perf-firefox',
+      use: { ...devices['Desktop Firefox'] },
+      testMatch: PERF,
+      dependencies: ['perf-chromium'],
+    },
+    {
+      name: 'perf-webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: PERF,
+      dependencies: ['perf-firefox'],
+    },
   ],
   webServer: {
     // The e2e build is the normal build plus the test hook (src/debug/testHook.ts).

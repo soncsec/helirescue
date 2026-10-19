@@ -35,8 +35,9 @@ test('a gun aims at the helicopter above it and flak takes its health', async ({
   await fly(page, { kind: 'climb', x: g.x, floorY: g.floorY, controls: 'keys' });
   // Hover up and to the left of the gun, in range.
   const x = g.x - 60;
-  await fly(page, { kind: 'move', x, floorY: g.floorY, controls: 'keys' });
-  // Stay until the first flak hit (staying long enough to be shot down would end the test).
+  // Fly in until the first hit: staying in range long enough would get it shot down.
+  await fly(page, { kind: 'move', x, floorY: g.floorY, controls: 'keys', untilHits: 1 });
+  // Stay until the first flak hit, if the approach got none (staying long enough to be shot down would end the test).
   await fly(page, {
     kind: 'hold',
     x,
@@ -78,11 +79,15 @@ test('bullets at roof height destroy a gun after a few hits', async ({ page }) =
   test.setTimeout(LONG);
   await openGame(page);
   const g = await firstGun(page);
-  // Level with the gun, in the gap before its building, facing it.
+  // Level with the gun, before its building, facing it. Get there safely: fly
+  // in out of the gun's range, drop to its height (it only fires upward, so it
+  // can't reach a helicopter level with it), then close in.
   const x = g.x - 140;
   const y = g.y - ENEMIES.gunHeight / 2 - WEAPONS.noseY;
-  await fly(page, { kind: 'climb', x, floorY: g.floorY, controls: 'keys' });
-  await fly(page, { kind: 'move', x, floorY: g.floorY, controls: 'keys' });
+  const safeX = g.x - ENEMIES.aaRange - 90;
+  await fly(page, { kind: 'climb', x: safeX, floorY: g.floorY, controls: 'keys' });
+  await fly(page, { kind: 'move', x: safeX, floorY: g.floorY, controls: 'keys' });
+  await fly(page, { kind: 'move', x: safeX, y, floorY: g.floorY, controls: 'keys' });
   await fly(page, { kind: 'move', x, y, floorY: g.floorY, controls: 'keys' });
   expect((await snapshot(page)).facing).toBe(1);
   await page.keyboard.down('z');
