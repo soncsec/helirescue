@@ -32,7 +32,7 @@ export interface Leg {
   untilGunDown?: number;
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
-  /** hold: stop once the helicopter has taken this many flak hits. */
+  /** move or hold: stop once the helicopter has taken this many flak hits. */
   untilHits?: number;
 }
 
@@ -151,6 +151,7 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
               gunDown || hit || (leg.forMs !== undefined && performance.now() - began >= leg.forMs)
             );
           }
+          if (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) return true;
           // Stopped and nearly level: any tilt left would keep pushing it sideways.
           return (
             Math.abs(s.player.x - leg.x) <= p.spot &&
