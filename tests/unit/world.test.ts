@@ -167,6 +167,21 @@ describe('room to land beside people', () => {
   });
 });
 
+describe('anti-aircraft guns on the map', () => {
+  const wide = (aaGuns: { x: number }[], people: WorldMap['people'] = []): WorldMap =>
+    map({ buildings: [b(200, 8), b(400, 8)], people, aaGuns });
+  it('must stand on a building roof without people, away from the edge', () => {
+    expect(worldProblems(wide([{ x: 250 }]), limits)).toEqual([]);
+    expect(worldProblems(wide([{ x: 350 }]), limits)).toEqual(['gun 0 is not on a building roof']);
+    expect(worldProblems(wide([{ x: 203 }]), limits)).toEqual([
+      'gun 0 is too close to the roof edge',
+    ]);
+    expect(worldProblems(wide([{ x: 250 }], [{ x: 310 }]), limits)).toEqual([
+      'gun 0 shares a roof with people',
+    ]);
+  });
+});
+
 describe('mission 1 map', () => {
   it('follows the world rules', () => {
     expect(worldProblems(MISSION_1, WORLD_LIMITS)).toEqual([]);
@@ -184,6 +199,10 @@ describe('mission 1 map', () => {
     expect(perRoof.length).toBeGreaterThanOrEqual(4);
     expect(Math.min(...perRoof)).toBeGreaterThanOrEqual(2);
     expect(MISSION_1.people.length).toBeGreaterThan(PEOPLE.capacity);
+  });
+
+  it('has anti-aircraft guns (M3.6)', () => {
+    expect(MISSION_1.aaGuns?.length).toBeGreaterThanOrEqual(1);
   });
 
   it('has roofs with a helipad to land on', () => {

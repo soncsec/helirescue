@@ -64,7 +64,9 @@ export type HeliEvent =
   | { kind: 'blocked' }
   | { kind: 'bumped' }
   | { kind: 'crashed' }
-  | { kind: 'respawned' };
+  | { kind: 'respawned' }
+  /** Shot by the enemy (flak); `crashed` instead when it takes the last of the health. */
+  | { kind: 'hit'; damage: number };
 
 export interface HeliWorld {
   /** Roofs and the street (the street is a surface the width of the world). */
@@ -95,6 +97,22 @@ export function newHeli(x: number, y: number, t: LandingTuning): Heli {
     on: null,
     crashedFor: 0,
   };
+}
+
+/**
+ * Damage from enemy fire. With no health left it crashes where it is, through
+ * the same crashed state as a hard landing, so lives and respawn work the same.
+ */
+export function hitHeli(h: Heli, damage: number): { heli: Heli; event: HeliEvent } {
+  if (h.mode === 'crashed' || !(damage > 0)) return { heli: h, event: { kind: 'none' } };
+  const health = Math.max(0, h.health - damage);
+  if (health === 0) {
+    return {
+      heli: { ...h, mode: 'crashed', health, on: null, crashedFor: 0 },
+      event: { kind: 'crashed' },
+    };
+  }
+  return { heli: { ...h, health }, event: { kind: 'hit', damage } };
 }
 
 /** Left and right of a part that reaches `back` behind and `front` ahead of x. */

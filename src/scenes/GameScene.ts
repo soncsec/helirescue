@@ -12,6 +12,7 @@ import {
   LANDING_FX,
   LIVES,
   EFFECTS,
+  ENEMIES,
   WEAPONS,
   PEOPLE,
   PLAYER,
@@ -22,6 +23,7 @@ import {
 } from '../config/tuning';
 import type { Axis, Point } from '../logic/movement';
 import {
+  hitHeli,
   newHeli,
   updateHeli,
   type Heli,
@@ -40,10 +42,19 @@ import {
   type PeopleEvent,
 } from '../logic/people';
 import { wantsTouch } from '../logic/device';
-import { createRng } from '../logic/rng';
+import { createRng, type Rng } from '../logic/rng';
 import type { TouchState } from '../logic/touch';
+import {
+  gunBox,
+  hitGun,
+  newEnemies,
+  updateEnemies,
+  type EnemyEvent,
+  type Enemies,
+} from '../logic/enemies';
 import { afterCrash } from '../logic/lives';
 import {
+  boxDistance,
   flying,
   newWeapons,
   updateWeapons,
@@ -82,7 +93,7 @@ export interface GameSnapshot {
   /** The roof (or street) it is landed on, or null. */
   on: Roof | null;
   /** Every helicopter and people event so far, plus bomb drops and blasts, oldest first (at most 50). */
-  events: (HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast')[];
+  events: (HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast' | 'gun-destroyed')[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
   seed: number;
@@ -97,6 +108,12 @@ export interface GameSnapshot {
     objects: number;
     /** The shots flying now. */
     shots: { kind: 'bullet' | 'bomb'; x: number; y: number; vx: number }[];
+  };
+  /** Anti-aircraft guns, flak flying now, and flak hits taken so far. */
+  enemies: {
+    guns: { x: number; y: number; alive: boolean; hp: number; aim: number }[];
+    flak: number;
+    hitsTaken: number;
   };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
@@ -148,6 +165,15 @@ export class GameScene extends Phaser.Scene {
   private nextSpark = 0;
   private nextBlast = 0;
   private shotCounts = { fired: 0, dropped: 0, impacts: 0, blasts: 0 };
+  /** Anti-aircraft guns and their flak (pooled), with their sprites. */
+  private enemies!: Enemies;
+  private gunSprites: Phaser.GameObjects.Sprite[] = [];
+  private flakSprites: Phaser.GameObjects.Sprite[] = [];
+  private bursts: Phaser.GameObjects.Sprite[] = [];
+  private nextBurst = 0;
+  private hitsTaken = 0;
+  /** Seeded randomness for gameplay (enemy fire). */
+  private rng!: Rng;
   /** Written by the HUD scene's D-pad; null on keyboard devices. */
   private touch: TouchState | null = null;
   /** True once the mission has ended and the result screen is up. */
@@ -176,6 +202,7 @@ export class GameScene extends Phaser.Scene {
     this.lives = LIVES.perMission;
     this.wreckedFor = null;
     const rng = createRng(this.seed);
+    this.rng = rng;
     const { theme, width } = this.map;
     const { groundY } = SCENERY;
 
@@ -224,6 +251,7 @@ export class GameScene extends Phaser.Scene {
     this.sprite = this.add.sprite(spawn.x, spawn.y, SIDE.key).play(SIDE.key);
     this.boom = this.add.sprite(0, 0, 'explosion').setVisible(false);
     this.makeWeapons();
+    this.makeEnemies();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
       ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
@@ -311,7 +339,11 @@ export class GameScene extends Phaser.Scene {
     );
     for (const e of shots) this.onWeaponEvent(e);
     this.drawShots();
-    const moved = updatePeople(this.people, heli, dt, this.hutDoorX, PEOPLE);
+    const fire = updateEnemies(this.enemies, this.heli, dt, this.arena(), ENEMIES, this.rng);
+    for (const e of fire) this.onEnemyEvent(e);
+    this.drawEnemies();
+    // Flak may have crashed it: people aboard are lost this same frame.
+    const moved = updatePeople(this.people, this.heli, dt, this.hutDoorX, PEOPLE);
     this.people = moved.people;
     for (const e of moved.events) this.onPeopleEvent(e);
     this.drawPeople();
@@ -347,6 +379,17 @@ export class GameScene extends Phaser.Scene {
         shots: this.weapons.shots
           .filter((s) => s.alive)
           .map((s) => ({ kind: s.kind, x: s.x, y: s.y, vx: s.vx })),
+      },
+      enemies: {
+        guns: this.enemies.guns.map((g) => ({
+          x: g.x,
+          y: g.y,
+          alive: g.alive,
+          hp: g.hp,
+          aim: g.aim,
+        })),
+        flak: this.enemies.flak.filter((s) => s.alive).length,
+        hitsTaken: this.hitsTaken,
       },
       input: {
         touch: this.touch !== null,
@@ -526,9 +569,75 @@ export class GameScene extends Phaser.Scene {
     this.nextBlast = 0;
   }
 
-  /** What shots can hit: every building (the base too) and the street. */
+  /** What shots can hit: every building (the base too), the street, and the guns. */
   private arena(): Arena {
-    return { buildings: this.roofs, groundY: this.world.groundY, width: this.map.width };
+    return {
+      buildings: this.roofs,
+      groundY: this.world.groundY,
+      width: this.map.width,
+      targets: this.enemies.guns.map((g) => gunBox(g, ENEMIES)),
+    };
+  }
+
+  /** The mission's guns on their roofs, the flak pool, and one sprite per gun and shell. */
+  private makeEnemies(): void {
+    const guns = (this.map.aaGuns ?? []).map((g) => {
+      const roof = roofUnder(this.map, g.x, WORLD_LIMITS);
+      if (!roof) throw new Error(`gun at ${g.x} is not on a roof`);
+      return { x: g.x, y: roof.y };
+    });
+    this.enemies = newEnemies(guns, ENEMIES);
+    this.hitsTaken = 0;
+    this.gunSprites = this.enemies.guns.map((g) =>
+      this.add.sprite(g.x, g.y + 1, 'aa-turret', g.aim).setOrigin(0.5, 1),
+    );
+    this.flakSprites = this.enemies.flak.map(() =>
+      this.add.sprite(0, 0, 'flak').play('flak').setVisible(false).setDepth(2),
+    );
+    this.bursts = Array.from({ length: EFFECTS.bursts }, () => {
+      const fx = this.add.sprite(0, 0, 'burst').setVisible(false).setDepth(2);
+      fx.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.setVisible(false));
+      return fx;
+    });
+    this.nextBurst = 0;
+  }
+
+  private onEnemyEvent(e: EnemyEvent): void {
+    if (e.kind === 'flak') return;
+    if (e.kind === 'burst') {
+      const fx = this.bursts[this.nextBurst++ % this.bursts.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'burst', repeat: 0 });
+      return;
+    }
+    if (e.kind === 'heli-hit') {
+      this.hitsTaken++;
+      const { heli, event } = hitHeli(this.heli, e.damage);
+      this.heli = heli;
+      if (event.kind !== 'none') this.onEvent(event);
+      const fx = this.bursts[this.nextBurst++ % this.bursts.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'burst', repeat: 0 });
+      return;
+    }
+    // A gun destroyed: an explosion where it stood.
+    this.log('gun-destroyed');
+    const fx = this.blasts[this.nextBlast++ % this.blasts.length];
+    fx?.setPosition(e.x, e.y)
+      .setOrigin(0.5, 0.8)
+      .setVisible(true)
+      .play({ key: 'explosion', repeat: 0 });
+    this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
+  }
+
+  /** Guns aim (frame) or disappear when destroyed; flak sprites follow their shells. */
+  private drawEnemies(): void {
+    this.enemies.guns.forEach((g, i) => {
+      this.gunSprites[i]?.setVisible(g.alive).setFrame(g.aim);
+    });
+    this.enemies.flak.forEach((s, i) => {
+      const sprite = this.flakSprites[i];
+      sprite?.setVisible(s.alive);
+      if (s.alive) sprite?.setPosition(s.x, s.y);
+    });
   }
 
   private onWeaponEvent(e: WeaponEvent): void {
@@ -540,9 +649,21 @@ export class GameScene extends Phaser.Scene {
       this.shotCounts.impacts++;
       const fx = this.sparks[this.nextSpark++ % this.sparks.length];
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
+      if (e.target !== undefined) {
+        const destroyed = hitGun(this.enemies, e.target, 1);
+        if (destroyed) this.onEnemyEvent(destroyed);
+      }
     } else {
       this.shotCounts.blasts++;
       this.log('blast');
+      // A bomb destroys any gun close enough to the blast.
+      this.enemies.guns.forEach((g, i) => {
+        const box = gunBox(g, ENEMIES);
+        if (box && boxDistance(box, e.x, e.y) <= ENEMIES.blastRadius) {
+          const destroyed = hitGun(this.enemies, i, g.hp);
+          if (destroyed) this.onEnemyEvent(destroyed);
+        }
+      });
       const fx = this.blasts[this.nextBlast++ % this.blasts.length];
       fx?.setPosition(e.x, e.y)
         .setOrigin(0.5, 0.8)

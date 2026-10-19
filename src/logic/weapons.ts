@@ -40,11 +40,28 @@ export interface WeaponsTuning {
   hitStep: number;
 }
 
-/** What shots can hit: buildings (solid from the roof down) and the street. */
+/** A rectangle in the world, such as an enemy that shots can hit. */
+export interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** What shots can hit: buildings (solid from the roof down), the street, and targets. */
 export interface Arena {
   buildings: readonly Roof[];
   groundY: number;
   width: number;
+  /** Enemies, by index; a shot that hits one reports its index. Dead ones are null. */
+  targets?: readonly (Box | null)[];
+}
+
+/** Distance from a point to the nearest edge of a box (0 inside it). */
+export function boxDistance(b: Box, x: number, y: number): number {
+  const dx = Math.max(b.left - x, 0, x - b.right);
+  const dy = Math.max(b.top - y, 0, y - b.bottom);
+  return Math.hypot(dx, dy);
 }
 
 export interface Weapons {
@@ -58,8 +75,8 @@ export interface Weapons {
 export type WeaponEvent =
   | { kind: 'fired' }
   | { kind: 'dropped' }
-  /** A bullet hit a wall or the street. */
-  | { kind: 'impact'; x: number; y: number }
+  /** A bullet hit a wall, the street, or the target with index `target`. */
+  | { kind: 'impact'; x: number; y: number; target?: number }
   /** A bomb hit a roof or the street and exploded. */
   | { kind: 'blast'; x: number; y: number };
 
@@ -81,8 +98,19 @@ export function armed(h: Heli): boolean {
   return h.mode === 'flying' || h.mode === 'landing';
 }
 
-/** The building a point is inside, or the street below it: what a shot hits there. */
-function hitAt(x: number, y: number, a: Arena): { x: number; y: number; roof: number } | null {
+/** What a shot at a point hits: a target, a building, or the street below it. */
+export function hitAt(
+  x: number,
+  y: number,
+  a: Arena,
+): { x: number; y: number; roof: number; target?: number } | null {
+  const targets = a.targets ?? [];
+  for (let i = 0; i < targets.length; i++) {
+    const b = targets[i];
+    if (b && x >= b.left && x <= b.right && y >= b.top && y <= b.bottom) {
+      return { x, y, roof: y, target: i };
+    }
+  }
   if (y >= a.groundY) return { x, y: a.groundY, roof: a.groundY };
   for (const b of a.buildings) {
     if (x >= b.left && x <= b.right && y >= b.y) return { x, y, roof: b.y };
@@ -91,7 +119,13 @@ function hitAt(x: number, y: number, a: Arena): { x: number; y: number; roof: nu
 }
 
 /** Moves a shot along its path in small steps; returns the first hit, if any. */
-function travel(s: Shot, dx: number, dy: number, a: Arena, step: number): ReturnType<typeof hitAt> {
+export function travel(
+  s: { x: number; y: number },
+  dx: number,
+  dy: number,
+  a: Arena,
+  step: number,
+): ReturnType<typeof hitAt> {
   const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / step));
   for (let i = 1; i <= n; i++) {
     const x = s.x + (dx * i) / n;
@@ -136,7 +170,9 @@ export function updateWeapons(
       events.push(
         s.kind === 'bomb'
           ? { kind: 'blast', x: hit.x, y: Math.min(hit.y, hit.roof) }
-          : { kind: 'impact', x: hit.x, y: hit.y },
+          : hit.target === undefined
+            ? { kind: 'impact', x: hit.x, y: hit.y }
+            : { kind: 'impact', x: hit.x, y: hit.y, target: hit.target },
       );
     } else if (s.x < 0 || s.x > a.width || (s.kind === 'bullet' && s.age >= t.bulletLife)) {
       s.alive = false;

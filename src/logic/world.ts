@@ -20,6 +20,8 @@ export interface WorldMap {
   buildings: readonly PlacedBuilding[];
   /** People waiting to be rescued, by x position; each stands on the building roof below. */
   people: readonly { x: number }[];
+  /** Anti-aircraft guns, by x position, on building roofs without people (M3.6). */
+  aaGuns?: readonly { x: number }[];
 }
 
 export interface WorldLimits {
@@ -129,6 +131,15 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
     if (!r) problems.push(`person ${i} is not on a building roof`);
     else if (p.x < r.left + limits.personMargin || p.x > r.right - limits.personMargin) {
       problems.push(`person ${i} is too close to the roof edge`);
+    }
+  });
+  (world.aaGuns ?? []).forEach((g, i) => {
+    const r = roofUnder(world, g.x, limits);
+    if (!r) problems.push(`gun ${i} is not on a building roof`);
+    else if (g.x < r.left + limits.personMargin || g.x > r.right - limits.personMargin) {
+      problems.push(`gun ${i} is too close to the roof edge`);
+    } else if (world.people.some((p) => p.x >= r.left && p.x <= r.right)) {
+      problems.push(`gun ${i} shares a roof with people`);
     }
   });
   world.buildings.forEach((b, i) => {

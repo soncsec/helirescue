@@ -29,6 +29,7 @@ Drawn by Claude with the scripts in `tools/art/`. Same licence as this repo.
 - `assets/tiles/buildings-night.png`, `assets/tiles/buildings-war.png`: `tools/art/buildings.mjs`
 - `assets/sprites/base.png`: `tools/art/base.mjs` (the rescue base, M2.4)
 - `assets/sprites/bullet.png`, `assets/sprites/bomb.png`, `assets/sprites/spark.png`: `tools/art/weapons.mjs` (the gun and bombs, M3.5)
+- `assets/sprites/flak.png`, `assets/sprites/burst.png`: `tools/art/weapons.mjs` (enemy flak, M3.6)
 
 ### Other sources (approved by the owner 2026-10-18)
 
