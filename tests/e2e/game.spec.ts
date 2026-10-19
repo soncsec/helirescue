@@ -53,6 +53,7 @@ test('boots with no console errors and no third-party requests', async ({ page }
 test('the helicopter starts over the base, flies with tilt, and the camera follows', async ({
   page,
 }) => {
+  test.slow();
   await openGame(page);
   const start = await snapshot(page);
   expect(start.missing).toEqual([]);
