@@ -230,6 +230,40 @@ export const TOUCH = {
   line: 0xf0821e,
   pressed: 0xffd23f,
   alpha: 0.55,
+  /** Pause button: top right, under the score; centre and half its size. */
+  pauseX: GAME_WIDTH - 18,
+  pauseY: 30,
+  pauseHalf: 10,
+} as const;
+
+/** Title screen (src/scenes/TitleScene.ts), in game pixels. */
+export const TITLE = {
+  /** The game's name, drawn at twice the HUD font size (a whole-number scale). */
+  nameY: 26,
+  nameSize: 16,
+  taglineY: 56,
+  /** Controls table: first row, row spacing, key column and action column. */
+  controlsY: 92,
+  row: 14,
+  keyX: 120,
+  actionX: 290,
+  highY: 134,
+  startY: 158,
+  /** The CC-BY art credit along the bottom. */
+  creditY: 256,
+  /** Start prompt blink, ms. */
+  blinkMs: 600,
+  /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
+  panelTop: 82,
+  panelBottom: 180,
+  panelWidth: 300,
+  panelAlpha: 0.8,
+} as const;
+
+/** Pause panel (src/scenes/PauseScene.ts), in game pixels. */
+export const PAUSE = {
+  panelWidth: 240,
+  panelHeight: 72,
 } as const;
 
 export const CAMERA = {

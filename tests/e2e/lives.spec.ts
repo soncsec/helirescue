@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openGame } from './helpers';
 import { LIVES, SCORING } from '../../src/config/tuning';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
@@ -10,13 +11,6 @@ import type { GameSnapshot } from '../../src/scenes/GameScene';
  */
 
 const MOVE = { timeout: 40_000 };
-
-async function openGame(page: Page): Promise<void> {
-  await page.goto('./');
-  await expect
-    .poll(() => page.evaluate(() => window.__game?.scene() ?? null), { timeout: 15_000 })
-    .toBe('Game');
-}
 
 async function snapshot(page: Page): Promise<GameSnapshot> {
   const snap = await page.evaluate(() => window.__game?.snapshot() ?? null);

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openGame } from './helpers';
 import { GAME_WIDTH, HELI_SHAPE, LANDING, PEOPLE, SCORING, TOUCH } from '../../src/config/tuning';
 import type { Roof } from '../../src/logic/world';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
@@ -59,13 +60,6 @@ async function snapshot(page: Page): Promise<GameSnapshot> {
   const snap = await page.evaluate(() => window.__game?.snapshot() ?? null);
   if (!snap) throw new Error('game scene is not running');
   return snap;
-}
-
-async function openGame(page: Page): Promise<void> {
-  await page.goto('./');
-  await expect
-    .poll(() => page.evaluate(() => window.__game?.scene() ?? null), { timeout: 15_000 })
-    .toBe('Game');
 }
 
 /** Flies one leg with the in-page autopilot and returns the state at the end. */

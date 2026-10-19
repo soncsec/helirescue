@@ -37,9 +37,9 @@ test('the art viewer loads all the art with no errors or third-party requests', 
   expect(foreign).toEqual([]);
 });
 
-test('the game still opens by default', async ({ page }) => {
+test('without ?scene=art the title screen opens', async ({ page }) => {
   await page.goto('./');
   await expect
     .poll(() => page.evaluate(() => window.__game?.scene() ?? null), { timeout: 15_000 })
-    .toBe('Game');
+    .toBe('Title');
 });

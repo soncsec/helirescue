@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openGame } from './helpers';
 import { SCORING } from '../../src/config/tuning';
 import type { ResultSnapshot } from '../../src/scenes/ResultScene';
 
@@ -12,13 +13,6 @@ import type { ResultSnapshot } from '../../src/scenes/ResultScene';
 
 const KEY = 'helirescue';
 const TOTAL = 16;
-
-async function openGame(page: Page): Promise<void> {
-  await page.goto('./');
-  await expect
-    .poll(() => page.evaluate(() => window.__game?.scene() ?? null), { timeout: 15_000 })
-    .toBe('Game');
-}
 
 async function settle(page: Page, saved: number, lost: number): Promise<ResultSnapshot> {
   await page.evaluate(([s, l]) => window.__game?.settle(s, l), [saved, lost] as const);

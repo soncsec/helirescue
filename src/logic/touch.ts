@@ -16,6 +16,8 @@ export interface TouchTuning {
 /** Shared between the touch controls (writer) and the game scene (reader). */
 export interface TouchState {
   axis: Axis;
+  /** Set by the pause button; the game scene clears it when it pauses. */
+  pause: boolean;
 }
 
 /** The pad is split into 8 equal sectors: a direction counts beyond sin(22.5°) of the distance. */
