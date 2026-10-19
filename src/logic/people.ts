@@ -62,16 +62,19 @@ export function exposed(p: Person): boolean {
 }
 
 /**
- * A person hit by a soldier: lost (they fall over and vanish; no blood).
- * Only exposed people can be hit; anyone else is left as they are.
+ * A person hit by a shot or a bomb: lost (they vanish; no blood). `can` says
+ * who may be hit: soldiers only shoot exposed people; the helicopter's own
+ * fire can hit anyone standing in the open (owner, 2026-10-19). Anyone else
+ * is left as they are.
  */
 export function shootPerson(
   people: readonly Person[],
   id: number,
+  can: (p: Person) => boolean = exposed,
 ): { people: Person[]; event: PeopleEvent | null } {
   let event: PeopleEvent | null = null;
   const next = people.map((p) => {
-    if (p.id !== id || !exposed(p)) return p;
+    if (p.id !== id || !can(p)) return p;
     event = { kind: 'lost', id };
     return { ...p, mode: 'lost' as const, roof: null };
   });
@@ -81,6 +84,15 @@ export function shootPerson(
 /** People inside the helicopter, including those queued to get out. */
 export function inHeli(p: Person): boolean {
   return p.mode === 'boarding' || p.mode === 'aboard' || (p.mode === 'unloading' && p.timer < 0);
+}
+
+/** The box a person can be hit in while standing in the open; null otherwise. */
+export function personBox(
+  p: Person,
+  t: Pick<PeopleTuning, 'halfWidth' | 'height'>,
+): { left: number; right: number; top: number; bottom: number } | null {
+  if (!visible(p)) return null;
+  return { left: p.x - t.halfWidth, right: p.x + t.halfWidth, top: p.y - t.height, bottom: p.y };
 }
 
 /** True when the person should be drawn. */
