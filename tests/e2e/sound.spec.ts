@@ -89,13 +89,18 @@ test('M turns sound off and on, and the choice is remembered', async ({ page: fi
   // Come back later: a new page in the same browser, with the same saved data.
   await first.close();
   const page = await context.newPage();
+  // Make sure keys go to this page (closing the first one can leave focus behind).
+  await page.bringToFront();
   await openTitle(page);
   expect((await sound(page))?.muted).toBe(true);
   // Muted, firing plays nothing.
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__game?.scene() ?? null)).toBe('Game');
+  // In the air first (the gun is off when landed), so the next check means something.
   await page.keyboard.down('ArrowUp');
-  await page.waitForTimeout(800);
+  await expect
+    .poll(() => page.evaluate(() => window.__game?.snapshot()?.player.y ?? 999), WAIT)
+    .toBeLessThan(110);
   await page.keyboard.up('ArrowUp');
   await page.keyboard.down('z');
   await page.waitForTimeout(800);
