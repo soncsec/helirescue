@@ -30,6 +30,8 @@ export interface Leg {
   /** Height to fly or hold at (helicopter centre y); cruise height when left out. */
   y?: number;
   untilGunDown?: number;
+  /** hold: stop once this tank is destroyed (M5.2). */
+  untilTankDown?: number;
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
   /** hold: stop once the helicopter's own fire has hit a person (friendly fire). */
@@ -153,7 +155,9 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (leg.kind === 'land') return s.mode === 'landed';
           if (leg.kind === 'slide') return s.mode === 'landed' || s.mode === 'crashed';
           if (leg.kind === 'hold') {
-            const gunDown = s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false;
+            const gunDown =
+              s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false ||
+              s.enemies.tanks[leg.untilTankDown ?? -1]?.alive === false;
             const hit =
               (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) ||
               (leg.untilPeopleHit === true && s.weapons.peopleHit > 0);

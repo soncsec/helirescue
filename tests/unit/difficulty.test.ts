@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY, ENEMIES, SOLDIERS } from '../../src/config/tuning';
+import { DIFFICULTY, ENEMIES, SOLDIERS, TANKS } from '../../src/config/tuning';
 import { DIFFICULTY_LIMITS, difficulty } from '../../src/logic/difficulty';
 
-const base = { enemies: ENEMIES, soldiers: SOLDIERS };
-const at = (m: number): ReturnType<typeof difficulty<typeof ENEMIES, typeof SOLDIERS>> =>
+const base = { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS };
+const at = (
+  m: number,
+): ReturnType<typeof difficulty<typeof ENEMIES, typeof SOLDIERS, typeof TANKS>> =>
   difficulty(m, base, DIFFICULTY);
 const missions = Array.from({ length: DIFFICULTY.lastMission }, (_, i) => i + 1);
 const avgReload = (r: { aaReloadMin: number; aaReloadMax: number }): number =>
@@ -19,7 +21,10 @@ describe('difficulty', () => {
     expect(DIFFICULTY.shotSpeedAtLast).toBeLessThanOrEqual(DIFFICULTY_LIMITS.shotSpeedAtLast);
     expect(DIFFICULTY.rangeAtLast).toBeLessThanOrEqual(DIFFICULTY_LIMITS.rangeAtLast);
     for (const m of missions) {
-      const { enemies: e, soldiers: s } = at(m);
+      const { enemies: e, soldiers: s, tanks: k } = at(m);
+      expect(TANKS.reloadMin / k.reloadMin).toBeLessThanOrEqual(2 + 1e-9);
+      expect(k.shellSpeed / TANKS.shellSpeed).toBeLessThanOrEqual(1.3 + 1e-9);
+      expect(k.range / TANKS.range).toBeLessThanOrEqual(1.2 + 1e-9);
       expect(ENEMIES.aaReloadMin / e.aaReloadMin).toBeLessThanOrEqual(2 + 1e-9);
       expect(SOLDIERS.reloadMin / s.reloadMin).toBeLessThanOrEqual(2 + 1e-9);
       expect(e.flakSpeed / ENEMIES.flakSpeed).toBeLessThanOrEqual(1.3 + 1e-9);
@@ -47,12 +52,21 @@ describe('difficulty', () => {
     for (const m of missions.slice(1)) {
       expect(at(m).soldiers.range).toBeGreaterThan(at(m - 1).soldiers.range);
       expect(at(m).enemies.flakSpeed).toBeGreaterThan(at(m - 1).enemies.flakSpeed);
+      expect(at(m).tanks.reloadMax).toBeLessThan(at(m - 1).tanks.reloadMax);
     }
   });
 
   it('never changes damage, hit points, the first-shot grace period or sizes', () => {
     for (const m of missions) {
-      const { enemies: e, soldiers: s } = at(m);
+      const { enemies: e, soldiers: s, tanks: k } = at(m);
+      expect(k).toMatchObject({
+        shellDamage: TANKS.shellDamage,
+        hp: TANKS.hp,
+        firstShot: TANKS.firstShot,
+        speed: TANKS.speed,
+        maxElevation: TANKS.maxElevation,
+        halfWidth: TANKS.halfWidth,
+      });
       expect(e).toMatchObject({
         flakDamage: ENEMIES.flakDamage,
         aaHp: ENEMIES.aaHp,
@@ -73,7 +87,8 @@ describe('difficulty', () => {
 
   it('keeps the reload range in order', () => {
     for (const m of missions) {
-      const { enemies: e, soldiers: s } = at(m);
+      const { enemies: e, soldiers: s, tanks: k } = at(m);
+      expect(k.reloadMin).toBeLessThan(k.reloadMax);
       expect(e.aaReloadMin).toBeLessThan(e.aaReloadMax);
       expect(s.reloadMin).toBeLessThan(s.reloadMax);
     }

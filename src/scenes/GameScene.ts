@@ -17,6 +17,7 @@ import {
   EFFECTS,
   ENEMIES,
   SOLDIERS,
+  TANKS,
   WEAPONS,
   PEOPLE,
   PLAYER,
@@ -61,6 +62,14 @@ import {
   type Enemies,
 } from '../logic/enemies';
 import { afterCrash } from '../logic/lives';
+import {
+  hitTank,
+  newArmour,
+  tankBox,
+  updateTanks,
+  type Armour,
+  type TankEvent,
+} from '../logic/tanks';
 import {
   hitSoldier,
   newSquad,
@@ -115,7 +124,13 @@ export interface GameSnapshot {
   on: Roof | null;
   /** Every helicopter and people event so far, plus bomb drops and blasts, oldest first (at most 50). */
   events: (
-    HeliEvent['kind'] | PeopleEvent['kind'] | 'dropped' | 'blast' | 'gun-destroyed' | 'soldier-down'
+    | HeliEvent['kind']
+    | PeopleEvent['kind']
+    | 'dropped'
+    | 'blast'
+    | 'gun-destroyed'
+    | 'soldier-down'
+    | 'tank-destroyed'
   )[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
@@ -148,6 +163,16 @@ export interface GameSnapshot {
     soldierShots: number;
     /** People shot by soldiers so far. */
     peopleHit: number;
+    /** Tanks (M5.2) and their shells flying now. */
+    tanks: {
+      x: number;
+      y: number;
+      alive: boolean;
+      hp: number;
+      facing: 1 | -1;
+      engaged: boolean;
+    }[];
+    tankShells: number;
   };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
@@ -230,7 +255,11 @@ export class GameScene extends Phaser.Scene {
   /** The mission and the score brought into it (M5.1). */
   private start: MissionStart = { mission: 1, startScore: 0 };
   /** This mission's enemy numbers, from difficulty(). */
-  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS>;
+  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS, typeof TANKS>;
+  /** Tanks and their shells (pooled), with their sprites. */
+  private armour!: Armour;
+  private tankSprites: Phaser.GameObjects.Sprite[] = [];
+  private tankShellSprites: Phaser.GameObjects.Sprite[] = [];
   private banner: Phaser.GameObjects.Text[] = [];
 
   constructor() {
@@ -245,7 +274,11 @@ export class GameScene extends Phaser.Scene {
     const mission = data?.mission ?? missionFromQuery(window.location.search, MISSIONS.length) ?? 1;
     this.start = { mission, startScore: data?.startScore ?? 0 };
     this.map = missionAt(mission).map;
-    this.foe = difficulty(mission, { enemies: ENEMIES, soldiers: SOLDIERS }, DIFFICULTY);
+    this.foe = difficulty(
+      mission,
+      { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS },
+      DIFFICULTY,
+    );
   }
 
   preload(): void {
@@ -311,6 +344,7 @@ export class GameScene extends Phaser.Scene {
     this.makeWeapons();
     this.makeEnemies();
     this.makeSquad();
+    this.makeTanks();
     this.startRotor();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
@@ -412,6 +446,8 @@ export class GameScene extends Phaser.Scene {
       this.rng,
     );
     for (const e of fire) this.onEnemyEvent(e);
+    const armour = updateTanks(this.armour, this.heli, dt, this.arena(), this.foe.tanks, this.rng);
+    for (const e of armour) this.onTankEvent(e);
     const out = this.people.filter(exposed).map((p) => ({
       id: p.id,
       x: p.x,
@@ -481,6 +517,15 @@ export class GameScene extends Phaser.Scene {
         })),
         soldierShots: this.squad.shots.filter((s) => s.alive).length,
         peopleHit: this.peopleHit,
+        tanks: this.armour.tanks.map((k) => ({
+          x: k.x,
+          y: k.y,
+          alive: k.alive,
+          hp: k.hp,
+          facing: k.facing,
+          engaged: k.engaged,
+        })),
+        tankShells: this.armour.shells.filter((s) => s.alive).length,
       },
       input: {
         touch: this.touch !== null,
@@ -754,10 +799,11 @@ export class GameScene extends Phaser.Scene {
       buildings: this.roofs,
       groundY: this.world.groundY,
       width: this.map.width,
-      // Guns first, then soldiers: a hit's target index says which.
+      // Guns, then soldiers, then tanks, then people: a hit's target index says which.
       targets: [
         ...this.enemies.guns.map((g) => gunBox(g, this.foe.enemies)),
         ...this.squad.soldiers.map((s) => soldierBox(s, this.foe.soldiers)),
+        ...this.armour.tanks.map((k) => tankBox(k, this.foe.tanks)),
         // Our own fire hits people too (owner, 2026-10-19).
         ...this.people.map((p) => personBox(p, PEOPLE)),
       ],
@@ -819,6 +865,56 @@ export class GameScene extends Phaser.Scene {
     this.soldierShotSprites = this.squad.shots.map(() =>
       this.add.sprite(0, 0, 'bullet').setTint(SOLDIERS.shotTint).setVisible(false).setDepth(2),
     );
+  }
+
+  /** The mission's tanks on the street, their shell pool, and their sprites (M5.2). */
+  private makeTanks(): void {
+    const { groundY } = SCENERY;
+    this.armour = newArmour(
+      (this.map.tanks ?? []).map((k) => ({
+        x: k.x,
+        y: groundY,
+        minX: k.x - k.patrol,
+        maxX: k.x + k.patrol,
+      })),
+      this.foe.tanks,
+    );
+    this.tankSprites = this.armour.tanks.map((k) =>
+      this.add
+        .sprite(k.x, k.y + 1, 'tank')
+        .setOrigin(0.5, 1)
+        .play('tank'),
+    );
+    this.tankShellSprites = this.armour.shells.map(() =>
+      this.add
+        .sprite(0, 0, 'flak')
+        .play('flak')
+        .setTint(TANKS.shellTint)
+        .setVisible(false)
+        .setDepth(2),
+    );
+  }
+
+  private onTankEvent(e: TankEvent): void {
+    if (e.kind === 'heli-hit' || e.kind === 'burst') {
+      this.onEnemyEvent(e);
+      return;
+    }
+    if (e.kind === 'tank-fired') {
+      play(this, 'sfx-flak');
+      const fx = this.sparks[this.nextSpark++ % this.sparks.length];
+      fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
+      return;
+    }
+    // A tank destroyed: an explosion where it stood.
+    this.log('tank-destroyed');
+    play(this, 'sfx-blast');
+    const fx = this.blasts[this.nextBlast++ % this.blasts.length];
+    fx?.setPosition(e.x, e.y)
+      .setOrigin(0.5, 0.8)
+      .setVisible(true)
+      .play({ key: 'explosion', repeat: 0 });
+    this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
   }
 
   /** Someone hit by the helicopter's own bullet or bomb: lost, like a soldier's hit. */
@@ -906,6 +1002,23 @@ export class GameScene extends Phaser.Scene {
     this.enemies.guns.forEach((g, i) => {
       this.gunSprites[i]?.setVisible(g.alive).setFrame(g.aim);
     });
+    // Treads roll while driving and stop while turning or aiming.
+    this.armour.tanks.forEach((k, i) => {
+      const sprite = this.tankSprites[i];
+      if (!sprite) return;
+      sprite
+        .setVisible(k.alive)
+        .setPosition(k.x, k.y + 1)
+        .setFlipX(k.facing < 0);
+      const rolling = k.alive && !k.engaged && k.turning === 0;
+      if (rolling && !sprite.anims.isPlaying) sprite.play('tank');
+      if (!rolling && sprite.anims.isPlaying) sprite.anims.pause();
+    });
+    this.armour.shells.forEach((s, i) => {
+      const sprite = this.tankShellSprites[i];
+      sprite?.setVisible(s.alive);
+      if (s.alive) sprite?.setPosition(s.x, s.y);
+    });
     this.enemies.flak.forEach((s, i) => {
       const sprite = this.flakSprites[i];
       sprite?.setVisible(s.alive);
@@ -928,15 +1041,19 @@ export class GameScene extends Phaser.Scene {
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
       if (e.target !== undefined) {
         const guns = this.enemies.guns.length;
-        const soldiers = this.squad.soldiers.length;
+        const soldiers = guns + this.squad.soldiers.length;
+        const tanks = soldiers + this.armour.tanks.length;
         if (e.target < guns) {
           const destroyed = hitGun(this.enemies, e.target, 1);
           if (destroyed) this.onEnemyEvent(destroyed);
-        } else if (e.target < guns + soldiers) {
+        } else if (e.target < soldiers) {
           const down = hitSoldier(this.squad, e.target - guns);
           if (down) this.onSoldierEvent(down);
+        } else if (e.target < tanks) {
+          const destroyed = hitTank(this.armour, e.target - soldiers, 1);
+          if (destroyed) this.onTankEvent(destroyed);
         } else {
-          const p = this.people[e.target - guns - soldiers];
+          const p = this.people[e.target - tanks];
           if (p) this.friendlyFire(p.id);
         }
       }
@@ -963,6 +1080,14 @@ export class GameScene extends Phaser.Scene {
         if (box && boxDistance(box, e.x, e.y) <= ENEMIES.blastRadius) {
           const destroyed = hitGun(this.enemies, i, g.hp);
           if (destroyed) this.onEnemyEvent(destroyed);
+        }
+      });
+      // And any tank close enough.
+      this.armour.tanks.forEach((k, i) => {
+        const box = tankBox(k, this.foe.tanks);
+        if (box && boxDistance(box, e.x, e.y) <= TANKS.blastRadius) {
+          const destroyed = hitTank(this.armour, i, k.hp);
+          if (destroyed) this.onTankEvent(destroyed);
         }
       });
       const fx = this.blasts[this.nextBlast++ % this.blasts.length];

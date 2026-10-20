@@ -116,7 +116,58 @@ export function hitGun(e: Enemies, i: number, damage: number): EnemyEvent | null
 }
 
 /** Whether the helicopter can be shot at: anywhere but in a wreck. */
-const targetable = (h: Heli): boolean => h.mode !== 'crashed';
+export const targetable = (h: Heli): boolean => h.mode !== 'crashed';
+
+/** What a shell needs to know to hit the helicopter. */
+export interface ShellRules {
+  heliHalfWidth: number;
+  heliHalfHeight: number;
+  hitStep: number;
+}
+
+/**
+ * Moves one live shell (flak or a tank shell): it hits the helicopter, bursts
+ * on a building or the street, or bursts in the air after `life` seconds.
+ * Changes `s` in place; returns what happened, or null while it flies on.
+ */
+export function moveShell(
+  s: Flak,
+  h: Heli,
+  dt: number,
+  a: Arena,
+  t: ShellRules,
+  life: number,
+  damage: number,
+): EnemyEvent | null {
+  if (!s.alive) return null;
+  const f = h.flight;
+  s.age += dt;
+  const dx = s.vx * dt;
+  const dy = s.vy * dt;
+  // The helicopter first, then anything solid along the path.
+  const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / t.hitStep));
+  let hitHeli = false;
+  for (let i = 1; i <= n && !hitHeli; i++) {
+    const x = s.x + (dx * i) / n;
+    const y = s.y + (dy * i) / n;
+    hitHeli =
+      targetable(h) &&
+      Math.abs(x - f.x) <= t.heliHalfWidth &&
+      Math.abs(y - f.y) <= t.heliHalfHeight;
+  }
+  if (hitHeli) {
+    s.alive = false;
+    return { kind: 'heli-hit', damage, x: s.x, y: s.y };
+  }
+  const hit = travel(s, dx, dy, { ...a, targets: [] }, t.hitStep);
+  s.x += dx;
+  s.y += dy;
+  if (hit || s.age >= life) {
+    s.alive = false;
+    return { kind: 'burst', x: hit?.x ?? s.x, y: hit?.y ?? s.y };
+  }
+  return null;
+}
 
 /**
  * Aims every gun at the helicopter, fires when it is in range and above the
@@ -135,33 +186,8 @@ export function updateEnemies(
   const f = h.flight;
 
   for (const s of e.flak) {
-    if (!s.alive) continue;
-    s.age += dt;
-    const dx = s.vx * dt;
-    const dy = s.vy * dt;
-    // The helicopter first, then anything solid along the path.
-    const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / t.hitStep));
-    let hitHeli = false;
-    for (let i = 1; i <= n && !hitHeli; i++) {
-      const x = s.x + (dx * i) / n;
-      const y = s.y + (dy * i) / n;
-      hitHeli =
-        targetable(h) &&
-        Math.abs(x - f.x) <= t.heliHalfWidth &&
-        Math.abs(y - f.y) <= t.heliHalfHeight;
-    }
-    if (hitHeli) {
-      s.alive = false;
-      events.push({ kind: 'heli-hit', damage: t.flakDamage, x: s.x, y: s.y });
-      continue;
-    }
-    const hit = travel(s, dx, dy, { ...a, targets: [] }, t.hitStep);
-    s.x += dx;
-    s.y += dy;
-    if (hit || s.age >= t.flakLife) {
-      s.alive = false;
-      events.push({ kind: 'burst', x: hit?.x ?? s.x, y: hit?.y ?? s.y });
-    }
+    const ev = moveShell(s, h, dt, a, t, t.flakLife, t.flakDamage);
+    if (ev) events.push(ev);
   }
 
   e.guns.forEach((g, i) => {
