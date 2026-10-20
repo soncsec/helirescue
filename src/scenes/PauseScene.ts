@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { KEY_CONTROLS, TOUCH_CONTROLS } from '../config/controls';
 import { GAME_HEIGHT, GAME_WIDTH, HUD, PAUSE, RESULT } from '../config/tuning';
 import { onPress } from './keys';
 import { isMuted, play, toggleMute } from './sound';
@@ -8,15 +9,22 @@ export interface PauseData {
   touch: boolean;
 }
 
+/** Read-only view for the e2e test hook. */
+export interface PauseSnapshot {
+  lines: string[];
+}
+
 /**
- * Pause (roadmap M3.4): a panel over the paused game. P, Esc, Enter, Space
- * or a tap resumes; M or the SOUND button turns sound on or off (M4). The game opens it from the P or Esc key, the touch pause
- * button, or when the tab or app loses focus.
+ * Pause (roadmap M3.4): a panel over the paused game that also lists the
+ * controls (owner's play-test, 2026-10-20). P, Esc, Enter, Space or a tap
+ * resumes; M or the SOUND button turns sound on or off (M4). The game opens it
+ * from the P or Esc key, the touch pause button, or when the tab or app loses focus.
  */
 export class PauseScene extends Phaser.Scene {
   private leaving = false;
   private touch = false;
   private soundText: Phaser.GameObjects.Text | null = null;
+  private lines: string[] = [];
 
   constructor() {
     super('Pause');
@@ -35,12 +43,21 @@ export class PauseScene extends Phaser.Scene {
         PAUSE.panelWidth,
         PAUSE.panelHeight,
         RESULT.panelColour,
-        RESULT.panelAlpha,
+        PAUSE.panelAlpha,
       )
       .setStrokeStyle(2, RESULT.border);
     const top = GAME_HEIGHT / 2 - PAUSE.panelHeight / 2;
-    this.text(top + 14, 'PAUSED', HUD.accent);
-    this.text(top + 34, this.touch ? 'TAP TO RESUME' : 'PRESS P TO RESUME');
+    this.lines = [];
+    this.text(top + PAUSE.titleY, 'PAUSED', HUD.accent);
+    // The controls: what every key or button does.
+    const controls = this.touch ? TOUCH_CONTROLS : KEY_CONTROLS;
+    controls.forEach(([key, action], i) => {
+      const y = top + PAUSE.controlsY + i * PAUSE.row;
+      this.text(y, key, HUD.colour, PAUSE.keyX);
+      this.text(y, action, HUD.colour, PAUSE.actionX);
+      this.lines.push(`${key} ${action}`);
+    });
+    this.text(top + PAUSE.resumeY, this.touch ? 'TAP TO RESUME' : 'PRESS P TO RESUME');
     // Sound on or off (M4): M on a keyboard, a SOUND button on touch.
     const by = top + PAUSE.panelHeight - 20;
     if (this.touch) {
@@ -64,6 +81,10 @@ export class PauseScene extends Phaser.Scene {
     });
   }
 
+  snapshot(): PauseSnapshot {
+    return { lines: [...this.lines] };
+  }
+
   private soundLabel(): string {
     const state = isMuted() ? 'OFF' : 'ON';
     return this.touch ? `SOUND: ${state}` : `M  SOUND: ${state}`;
@@ -82,14 +103,21 @@ export class PauseScene extends Phaser.Scene {
     this.scene.resume('Game');
   }
 
-  private text(y: number, s: string, colour: string = HUD.colour): Phaser.GameObjects.Text {
+  /** A line of text: centred, or left-aligned at `x`. */
+  private text(
+    y: number,
+    s: string,
+    colour: string = HUD.colour,
+    x?: number,
+  ): Phaser.GameObjects.Text {
+    if (x === undefined) this.lines.push(s);
     return this.add
-      .text(GAME_WIDTH / 2, y, s, {
+      .text(x ?? GAME_WIDTH / 2, y, s, {
         fontFamily: HUD.font,
         fontSize: `${HUD.fontSize}px`,
         color: colour,
       })
-      .setOrigin(0.5, 0)
+      .setOrigin(x === undefined ? 0.5 : 0, 0)
       .setShadow(1, 1, HUD.shadow, 0, false, true);
   }
 }

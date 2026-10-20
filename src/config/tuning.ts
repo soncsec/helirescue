@@ -360,6 +360,9 @@ export const MISSION_BANNER = {
   y: 92,
   /** The name sits this far below the "MISSION n" line. */
   nameGap: 14,
+  /** Mission 1's controls hint (X drops a bomb, P shows the controls) sits this far below, and stays longer. */
+  hintGap: 34,
+  hintSeconds: 6,
 } as const;
 
 /** Saved data checks (H9, src/logic/save.ts). */
@@ -588,8 +591,18 @@ export const CREDITS_SCREEN = {
 
 /** Pause panel (src/scenes/PauseScene.ts), in game pixels. */
 export const PAUSE = {
-  panelWidth: 240,
-  panelHeight: 96,
+  /** Wide and tall enough for the controls table (owner, 2026-10-20), like the title's. */
+  panelWidth: 300,
+  panelHeight: 168,
+  titleY: 12,
+  /** Controls table: first row from the panel top, row spacing, key and action columns. */
+  controlsY: 32,
+  row: 14,
+  keyX: 120,
+  actionX: 290,
+  resumeY: 110,
+  /** More opaque than the result panel: the controls must read over the mission banner. */
+  panelAlpha: 0.92,
   /** The SOUND button on touch screens. */
   buttonWidth: 120,
   buttonHeight: 18,
