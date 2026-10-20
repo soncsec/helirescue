@@ -6,7 +6,7 @@ import type { ResultSnapshot } from '../../src/scenes/ResultScene';
 /**
  * Roadmap M3.2: the mission ends when everyone is saved or lost, the result
  * screen shows the score with the bonus, the high score is kept in the one
- * localStorage key (H9), and the mission can be played again. The test hook
+ * localStorage key (H9), and a win goes on to the next mission (M5.1). The test hook
  * settles the outcome so these checks don't need every trip flown (the full
  * flight loop is covered by rescue.spec.ts).
  */
@@ -43,15 +43,19 @@ test('saving everyone ends the mission with the full and perfect bonus, and a ne
   });
   expect(r).toMatchObject({ highScore: score, newHigh: true, touch: false });
   expect(r.lines).toContain('PERFECT RESCUE!');
+  expect(r.lines).toContain('MISSION 1: NIGHT CITY');
+  expect(r.lines).toContain(`SCORE ${score}`);
   expect(r.lines).toContain(`HIGH SCORE NEW! ${score}`);
-  expect(r.lines).toContain('PRESS ENTER TO PLAY AGAIN');
+  expect(r.lines).toContain('PRESS ENTER TO CONTINUE');
+  // Mission 1 has no earlier missions to add.
+  expect(r.lines.some((l) => l.startsWith('EARLIER'))).toBe(false);
   // The game is frozen behind the result screen.
   expect(await page.evaluate(() => window.__game?.snapshot() ?? null)).toBeNull();
-  // Exactly the three H9 fields, nothing else.
+  // Exactly the three H9 fields, nothing else; mission 2 is now reached.
   expect(JSON.parse((await stored(page)) ?? '')).toEqual({
     highScore: score,
     muted: false,
-    furthestMission: 1,
+    furthestMission: 2,
   });
 });
 
@@ -100,21 +104,27 @@ test('a corrupt save is ignored and replaced, and the high score survives a relo
   expect(second).toMatchObject({ newHigh: false, highScore: first.result.score });
 });
 
-test('Enter plays the mission again from the start', async ({ page }) => {
+test('Enter after a win starts mission 2, carrying the score over', async ({ page }) => {
   await openGame(page);
-  await settle(page, 10, 6);
+  const r = await settle(page, 10, 6);
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__game?.result() ?? null)).toBeNull();
   await expect
-    .poll(async () => (await page.evaluate(() => window.__game?.snapshot() ?? null))?.hud ?? null)
-    .toMatchObject({ saved: 0, total: TOTAL, score: 0, health: 100 });
+    .poll(async () => (await page.evaluate(() => window.__game?.snapshot() ?? null))?.mission)
+    .toBe(2);
   const s = await page.evaluate(() => window.__game?.snapshot() ?? null);
+  expect(s?.startScore).toBe(r.result.score);
+  expect(s?.hud).toMatchObject({ saved: 0, score: r.result.score, health: 100 });
+  expect(s?.hud.total).toBeGreaterThan(TOTAL);
   expect(s?.people.every((p) => p.mode === 'waiting')).toBe(true);
   expect(s?.events).toEqual([]);
   expect(await page.evaluate(() => window.__game?.hudActive() ?? false)).toBe(true);
 });
 
-test('on a phone the result says tap, and a tap plays again', async ({ browser, browserName }) => {
+test('on a phone the result says tap, and a tap goes on to the next mission', async ({
+  browser,
+  browserName,
+}) => {
   test.skip(browserName === 'firefox', 'Firefox has no mobile emulation in Playwright');
   const context = await browser.newContext({
     viewport: { width: 844, height: 390 },
@@ -125,11 +135,14 @@ test('on a phone the result says tap, and a tap plays again', async ({ browser, 
   await openGame(page);
   const r = await settle(page, TOTAL, 0);
   expect(r.touch).toBe(true);
-  expect(r.lines).toContain('TAP TO PLAY AGAIN');
+  expect(r.lines).toContain('TAP TO CONTINUE');
   await page.locator('#game canvas').tap();
   await expect.poll(() => page.evaluate(() => window.__game?.result() ?? null)).toBeNull();
   await expect
-    .poll(async () => (await page.evaluate(() => window.__game?.snapshot() ?? null))?.hud.saved)
-    .toBe(0);
+    .poll(async () => {
+      const s = await page.evaluate(() => window.__game?.snapshot() ?? null);
+      return s && { mission: s.mission, saved: s.hud.saved };
+    })
+    .toEqual({ mission: 2, saved: 0 });
   await context.close();
 });

@@ -3,6 +3,7 @@ import { SAVE } from '../../src/config/tuning';
 import {
   DEFAULT_SAVE,
   parseSave,
+  recordProgress,
   recordScore,
   SAVE_KEY,
   serializeSave,
@@ -70,6 +71,25 @@ describe('recordScore', () => {
     const d = { ...DEFAULT_SAVE };
     expect(recordScore(d, -1, limits).isNew).toBe(false);
     expect(recordScore(d, 2.5, limits).isNew).toBe(false);
+  });
+});
+
+describe('recordProgress', () => {
+  const d = { ...DEFAULT_SAVE };
+  it('keeps the furthest mission reached', () => {
+    expect(recordProgress(d, 2, SAVE)).toEqual({
+      data: { ...d, furthestMission: 2 },
+      changed: true,
+    });
+    const far = { ...d, furthestMission: 4 };
+    expect(recordProgress(far, 2, SAVE)).toEqual({ data: far, changed: false });
+    expect(recordProgress(far, 4, SAVE)).toEqual({ data: far, changed: false });
+  });
+
+  it('ignores a mission that does not exist', () => {
+    for (const m of [0, SAVE.missions + 1, 2.5, Number.NaN]) {
+      expect(recordProgress(d, m, SAVE)).toEqual({ data: d, changed: false });
+    }
   });
 });
 

@@ -57,6 +57,21 @@ export function serializeSave(d: SaveData): string {
   });
 }
 
+/**
+ * Records that `mission` has been reached (M5.1); the furthest one is kept.
+ * `changed` when it moves further than before.
+ */
+export function recordProgress(
+  d: SaveData,
+  mission: number,
+  limits: SaveLimits,
+): { data: SaveData; changed: boolean } {
+  if (!wholeIn(mission, 1, limits.missions) || mission <= d.furthestMission) {
+    return { data: d, changed: false };
+  }
+  return { data: { ...d, furthestMission: mission }, changed: true };
+}
+
 /** Records a finished mission's score; `isNew` when it beats the high score. */
 export function recordScore(
   d: SaveData,

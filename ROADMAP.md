@@ -124,7 +124,10 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 
 Order agreed with the owner on 2026-10-20: mission 2 is playable after the first task.
 
-- [ ] M5.1 Mission data format and `difficulty()` with tested limits (H4); mission 2 (industrial backdrop, today's enemy types) and moving on to the next mission after a win
+- [x] M5.1 Mission data format and `difficulty()` with tested limits (H4); mission 2 (industrial backdrop, today's enemy types) and moving on to the next mission after a win
+  - [x] `src/missions/` lists each mission's name and map; mission 2 "Factory District": 5 screens, 19 people, 3 guns, 5 soldiers
+  - [x] `difficulty()` (`src/logic/difficulty.ts`): mission 1 unchanged; by mission 5 up to 2× the fire rate, shots 30% faster, range 20% further; damage and hit points never change
+  - [x] A win continues to the next mission with the score carried over; Retry keeps the score the mission was entered with; the furthest mission is saved (H9); a banner names the mission as it starts; `?mission=N` starts a mission directly for play-testing
 - [ ] M5.2 Tanks from mission 2: they drive along the street and fire shells up at the helicopter when it is low or landed; a bomb or 4 bullets destroys one
 - [ ] M5.3 Enemy aircraft: the VTOL jet from mission 2 (fast strafing passes), the gunship from mission 4 (hovers and fires bursts)
 - [ ] M5.4 Missions 3–5: layouts, plus backdrops from the CC0 pack (3 Urban landscape, 4 Ocean View day, 5 Ocean View night), shown to the owner side by side before they are added

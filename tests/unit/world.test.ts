@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD_LIMITS } from '../../src/config/tuning';
-import { HELI_SHAPE, PEOPLE } from '../../src/config/tuning';
+import { DIFFICULTY, HELI_SHAPE, PEOPLE, SAVE } from '../../src/config/tuning';
 import {
   clearStretch,
   group,
@@ -11,6 +11,7 @@ import {
   type WorldMap,
 } from '../../src/logic/world';
 import { MISSION_1 } from '../../src/missions/mission1';
+import { MISSIONS, missionAt } from '../../src/missions';
 
 const limits = {
   tile: 16,
@@ -202,39 +203,68 @@ describe('soldiers on the map', () => {
   });
 });
 
-describe('mission 1 map', () => {
+describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({ n, map: m }) => {
   it('follows the world rules', () => {
-    expect(worldProblems(MISSION_1, WORLD_LIMITS)).toEqual([]);
+    expect(worldProblems(m, WORLD_LIMITS)).toEqual([]);
   });
 
-  it('is 4 screens wide (scope: about 4 to 6)', () => {
-    expect(MISSION_1.width).toBe(4 * 480);
+  it('is 4 to 6 screens wide (scope)', () => {
+    expect(m.width).toBeGreaterThanOrEqual(4 * 480);
+    expect(m.width).toBeLessThanOrEqual(6 * 480);
   });
 
   it('has groups on several roofs, more people than one trip carries', () => {
-    const rs = roofs(MISSION_1, WORLD_LIMITS);
+    const rs = roofs(m, WORLD_LIMITS);
     const perRoof = rs
-      .map((r) => MISSION_1.people.filter((p) => p.x >= r.left && p.x <= r.right).length)
-      .filter((n) => n > 0);
+      .map((r) => m.people.filter((p) => p.x >= r.left && p.x <= r.right).length)
+      .filter((k) => k > 0);
     expect(perRoof.length).toBeGreaterThanOrEqual(4);
     expect(Math.min(...perRoof)).toBeGreaterThanOrEqual(2);
-    expect(MISSION_1.people.length).toBeGreaterThan(PEOPLE.capacity);
+    expect(m.people.length).toBeGreaterThan(PEOPLE.capacity);
   });
 
-  it('has anti-aircraft guns (M3.6)', () => {
-    expect(MISSION_1.aaGuns?.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('has soldiers (M3.6)', () => {
-    expect(MISSION_1.soldiers?.length).toBeGreaterThanOrEqual(1);
+  it('has anti-aircraft guns and soldiers (M3.6)', () => {
+    expect(m.aaGuns?.length).toBeGreaterThanOrEqual(1);
+    expect(m.soldiers?.length).toBeGreaterThanOrEqual(1);
   });
 
   it('has roofs with a helipad to land on', () => {
-    expect(MISSION_1.buildings.filter((x) => x.helipad).length).toBeGreaterThan(0);
+    expect(m.buildings.filter((x) => x.helipad).length).toBeGreaterThan(0);
   });
 
   it('starts with a low first building, so a low take-off meets a wall', () => {
-    const first = [...MISSION_1.buildings].sort((a, z) => a.x - z.x)[0];
+    const first = [...m.buildings].sort((a, z) => a.x - z.x)[0];
     expect(first?.height).toBeGreaterThanOrEqual(4);
+  });
+
+  it('has at least as many people and enemies as the mission before', () => {
+    const before = MISSIONS[n - 2]?.map;
+    if (!before) return;
+    expect(m.people.length).toBeGreaterThanOrEqual(before.people.length);
+    expect(m.aaGuns?.length ?? 0).toBeGreaterThanOrEqual(before.aaGuns?.length ?? 0);
+    expect(m.soldiers?.length ?? 0).toBeGreaterThanOrEqual(before.soldiers?.length ?? 0);
+  });
+});
+
+describe('missions', () => {
+  it('mission 1 is the play-tested map, 4 screens of night city', () => {
+    expect(missionAt(1).map).toBe(MISSION_1);
+    expect(MISSION_1.width).toBe(4 * 480);
+    expect(MISSION_1.theme).toBe('night');
+  });
+
+  it('mission 2 is in the factory district', () => {
+    expect(missionAt(2).map.theme).toBe('war');
+  });
+
+  it('has no more missions than the saved data and the difficulty curve allow', () => {
+    expect(MISSIONS.length).toBeLessThanOrEqual(SAVE.missions);
+    expect(MISSIONS.length).toBeLessThanOrEqual(DIFFICULTY.lastMission);
+    expect(new Set(MISSIONS.map((m) => m.name)).size).toBe(MISSIONS.length);
+  });
+
+  it('rejects a mission that does not exist', () => {
+    expect(() => missionAt(0)).toThrow(RangeError);
+    expect(() => missionAt(MISSIONS.length + 1)).toThrow(RangeError);
   });
 });

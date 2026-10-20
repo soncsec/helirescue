@@ -4,13 +4,16 @@ import {
   BASE_ART,
   CAMERA,
   DEFAULT_SEED,
+  DIFFICULTY,
   FLIGHT,
   GAME_HEIGHT,
+  GAME_WIDTH,
   HELI_SHAPE,
   HUD,
   LANDING,
   LANDING_FX,
   LIVES,
+  MISSION_BANNER,
   EFFECTS,
   ENEMIES,
   SOLDIERS,
@@ -76,9 +79,12 @@ import {
   type Weapons,
 } from '../logic/weapons';
 import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
-import { recordScore } from '../logic/save';
+import { recordProgress, recordScore } from '../logic/save';
+import { difficulty, type Foes } from '../logic/difficulty';
+import { afterResult, missionFromQuery, nextMission, type MissionStart } from '../logic/progress';
 import { roofOf, roofUnder, soldierPost, type Roof } from '../logic/world';
-import { MISSION_1 } from '../missions/mission1';
+import { MISSIONS, missionAt } from '../missions';
+import type { WorldMap } from '../logic/world';
 import {
   addBackdrop,
   addBuilding,
@@ -114,6 +120,11 @@ export interface GameSnapshot {
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
   seed: number;
+  /** The mission being flown (from 1) and the score brought in from earlier missions. */
+  mission: number;
+  startScore: number;
+  /** True while the "MISSION n" banner shows at the start. */
+  banner: boolean;
   /** Shots flying now, totals so far, and how many game objects exist (pooling: it stays flat). */
   weapons: {
     bullets: number;
@@ -160,7 +171,7 @@ const RULES: HeliRules = { flight: FLIGHT, landing: LANDING, shape: HELI_SHAPE }
 const MAX_EVENTS = 50;
 
 /**
- * The game (mission 1 from roadmap M3.1): a wide city with the base at the
+ * The game (missions from roadmap M3.1 and M5.1): a wide city with the base at the
  * left end, the camera following the helicopter (H1), arcade flight (H2),
  * landing rules and the rescue loop (H3): people board on their roof and are
  * saved when unloaded at base. The HUD runs in its own scene (HudScene).
@@ -215,10 +226,26 @@ export class GameScene extends Phaser.Scene {
   private seed = DEFAULT_SEED;
   private layers: ParallaxLayer[] = [];
   private roofs: Roof[] = [];
-  private readonly map = MISSION_1;
+  private map: WorldMap = missionAt(1).map;
+  /** The mission and the score brought into it (M5.1). */
+  private start: MissionStart = { mission: 1, startScore: 0 };
+  /** This mission's enemy numbers, from difficulty(). */
+  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS>;
+  private banner: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('Game');
+  }
+
+  /**
+   * Which mission to fly: from the result screen (next mission or Retry), or
+   * from the title, mission 1 unless ?mission=N picks another for play-testing.
+   */
+  init(data: Partial<MissionStart> | undefined): void {
+    const mission = data?.mission ?? missionFromQuery(window.location.search, MISSIONS.length) ?? 1;
+    this.start = { mission, startScore: data?.startScore ?? 0 };
+    this.map = missionAt(mission).map;
+    this.foe = difficulty(mission, { enemies: ENEMIES, soldiers: SOLDIERS }, DIFFICULTY);
   }
 
   preload(): void {
@@ -290,6 +317,8 @@ export class GameScene extends Phaser.Scene {
       ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
       : null;
     this.scene.launch('Hud', { read: (): HudState | null => this.hudState(), touch: this.touch });
+
+    this.showBanner();
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, width, GAME_HEIGHT);
@@ -374,7 +403,14 @@ export class GameScene extends Phaser.Scene {
     );
     for (const e of shots) this.onWeaponEvent(e);
     this.drawShots();
-    const fire = updateEnemies(this.enemies, this.heli, dt, this.arena(), ENEMIES, this.rng);
+    const fire = updateEnemies(
+      this.enemies,
+      this.heli,
+      dt,
+      this.arena(),
+      this.foe.enemies,
+      this.rng,
+    );
     for (const e of fire) this.onEnemyEvent(e);
     const out = this.people.filter(exposed).map((p) => ({
       id: p.id,
@@ -383,7 +419,7 @@ export class GameScene extends Phaser.Scene {
       roof: this.roofs.findIndex((r) => sameRoof(r, p.roof)),
       vx: p.mode === 'running' ? p.facing * PEOPLE.runSpeed : 0,
     }));
-    const squad = updateSquad(this.squad, out, dt, this.arena(), SOLDIERS, this.rng);
+    const squad = updateSquad(this.squad, out, dt, this.arena(), this.foe.soldiers, this.rng);
     for (const e of squad) this.onSoldierEvent(e);
     this.drawEnemies();
     // Flak may have crashed it: people aboard are lost this same frame.
@@ -415,6 +451,9 @@ export class GameScene extends Phaser.Scene {
       people: this.people.map((p) => ({ id: p.id, mode: p.mode, x: p.x, y: p.y })),
       hud: this.hudState(),
       seed: this.seed,
+      mission: this.start.mission,
+      startScore: this.start.startScore,
+      banner: this.banner.some((t) => t.visible && t.alpha > 0),
       weapons: {
         bullets: flying(this.weapons, 'bullet'),
         bombs: flying(this.weapons, 'bomb'),
@@ -464,7 +503,7 @@ export class GameScene extends Phaser.Scene {
       total: t.total,
       aboard: t.aboard,
       capacity: PEOPLE.capacity,
-      score: rescueScore(t.saved, SCORING),
+      score: this.start.startScore + rescueScore(t.saved, SCORING),
       lives: this.lives,
     };
   }
@@ -506,18 +545,57 @@ export class GameScene extends Phaser.Scene {
       kind === 'complete'
         ? missionResult(t.saved, t.lost, t.total, SCORING)
         : gameOverResult(t.saved, t.lost, t.total, SCORING);
-    const { data, isNew } = recordScore(loadSave(), result.score, SAVE);
-    if (isNew) storeSave(data);
+    const { mission, startScore } = this.start;
+    const total = startScore + result.score;
+    const next = kind === 'complete' ? nextMission(mission, MISSIONS.length) : null;
+    const progress = recordProgress(loadSave(), next ?? mission, SAVE);
+    const { data, isNew } = recordScore(progress.data, total, SAVE);
+    if (isNew || progress.changed) storeSave(data);
     const show: ResultData = {
       kind,
       result,
+      mission,
+      name: missionAt(mission).name,
+      startScore,
+      total,
+      next: next !== null,
+      then: afterResult(kind, this.start, total, MISSIONS.length),
       highScore: data.highScore,
       newHigh: isNew,
       touch: this.touch !== null,
     };
     this.rotor?.stop();
+    for (const t of this.banner) t.setVisible(false);
     this.scene.launch('Result', show);
     this.scene.pause();
+  }
+
+  /** "MISSION n" and the mission's name across the screen, fading out after a moment. */
+  private showBanner(): void {
+    const B = MISSION_BANNER;
+    const line = (y: number, text: string, colour: string): Phaser.GameObjects.Text =>
+      this.add
+        .text(GAME_WIDTH / 2, y, text, {
+          fontFamily: HUD.font,
+          fontSize: `${HUD.fontSize}px`,
+          color: colour,
+        })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(3)
+        .setShadow(1, 1, HUD.shadow, 0, false, true);
+    const { mission } = this.start;
+    this.banner = [
+      line(B.y, `MISSION ${mission}`, HUD.accent),
+      line(B.y + B.nameGap, missionAt(mission).name, HUD.colour),
+    ];
+    this.tweens.add({
+      targets: this.banner,
+      alpha: 0,
+      delay: B.holdSeconds * 1000,
+      duration: B.fadeSeconds * 1000,
+      onComplete: () => this.banner.forEach((t) => t.setVisible(false)),
+    });
   }
 
   /** The rotor's hum: a loop that follows the helicopter (see drawRotor). */
@@ -678,8 +756,8 @@ export class GameScene extends Phaser.Scene {
       width: this.map.width,
       // Guns first, then soldiers: a hit's target index says which.
       targets: [
-        ...this.enemies.guns.map((g) => gunBox(g, ENEMIES)),
-        ...this.squad.soldiers.map((s) => soldierBox(s, SOLDIERS)),
+        ...this.enemies.guns.map((g) => gunBox(g, this.foe.enemies)),
+        ...this.squad.soldiers.map((s) => soldierBox(s, this.foe.soldiers)),
         // Our own fire hits people too (owner, 2026-10-19).
         ...this.people.map((p) => personBox(p, PEOPLE)),
       ],
@@ -693,7 +771,7 @@ export class GameScene extends Phaser.Scene {
       if (!roof) throw new Error(`gun at ${g.x} is not on a roof`);
       return { x: g.x, y: roof.y };
     });
-    this.enemies = newEnemies(guns, ENEMIES);
+    this.enemies = newEnemies(guns, this.foe.enemies);
     this.hitsTaken = 0;
     this.gunSprites = this.enemies.guns.map((g) =>
       this.add.sprite(g.x, g.y + 1, 'aa-turret', g.aim).setOrigin(0.5, 1),
@@ -717,7 +795,7 @@ export class GameScene extends Phaser.Scene {
         const s = this.map.soldiers?.[i];
         return { x: s?.x ?? p.minX, y: p.y, minX: p.minX, maxX: p.maxX };
       }),
-      SOLDIERS,
+      this.foe.soldiers,
     );
     this.peopleHit = 0;
     const anim = (key: string, start: number, end: number, fps: number, repeat: number): void => {
@@ -873,7 +951,7 @@ export class GameScene extends Phaser.Scene {
       }
       // A bomb takes down any soldier close enough to the blast.
       this.squad.soldiers.forEach((s, i) => {
-        const box = soldierBox(s, SOLDIERS);
+        const box = soldierBox(s, this.foe.soldiers);
         if (box && boxDistance(box, e.x, e.y) <= SOLDIERS.blastRadius) {
           const down = hitSoldier(this.squad, i);
           if (down) this.onSoldierEvent(down);
@@ -881,7 +959,7 @@ export class GameScene extends Phaser.Scene {
       });
       // A bomb destroys any gun close enough to the blast.
       this.enemies.guns.forEach((g, i) => {
-        const box = gunBox(g, ENEMIES);
+        const box = gunBox(g, this.foe.enemies);
         if (box && boxDistance(box, e.x, e.y) <= ENEMIES.blastRadius) {
           const destroyed = hitGun(this.enemies, i, g.hp);
           if (destroyed) this.onEnemyEvent(destroyed);
