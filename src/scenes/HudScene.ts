@@ -9,6 +9,8 @@ export interface HudState {
   maxHealth: number;
   saved: number;
   total: number;
+  /** How many must be saved for the mission to count (70% rule). */
+  needed: number;
   aboard: number;
   capacity: number;
   score: number;
@@ -19,12 +21,14 @@ export interface HudState {
 /**
  * Heads-up display in its own scene on top of the game, so camera shake and
  * scrolling never move it. Along the top: health bar, SAVED, ABOARD, SCORE;
- * under the bar, the helicopters left.
+ * under the bar, the helicopters left; under SAVED, how many must be saved
+ * (green once that many are).
  * On touch devices it also holds the on-screen D-pad (touchControls.ts).
  */
 export class HudScene extends Phaser.Scene {
   private fill!: Phaser.GameObjects.Rectangle;
   private saved!: Phaser.GameObjects.Text;
+  private needed!: Phaser.GameObjects.Text;
   private aboard!: Phaser.GameObjects.Text;
   private score!: Phaser.GameObjects.Text;
   private lives!: Phaser.GameObjects.Text;
@@ -47,6 +51,7 @@ export class HudScene extends Phaser.Scene {
     this.add.rectangle(B.x, B.y, B.width, B.height, B.empty).setOrigin(0, 0);
     this.fill = this.add.rectangle(B.x, B.y, B.width, B.height, B.colour).setOrigin(0, 0);
     this.saved = this.text(HUD.savedX);
+    this.needed = this.text(HUD.savedX, HUD.neededY);
     this.aboard = this.text(HUD.aboardX);
     this.score = this.text(HUD.scoreRight).setOrigin(1, 0);
     this.lives = this.text(HUD.livesX, HUD.livesY);
@@ -59,6 +64,8 @@ export class HudScene extends Phaser.Scene {
     this.fill.width = (B.width * s.health) / s.maxHealth;
     this.fill.fillColor = s.health > B.lowAt ? B.colour : B.lowColour;
     this.saved.setText(`SAVED ${s.saved}/${s.total}`);
+    this.needed.setText(`NEED ${s.needed}`);
+    this.needed.setColor(s.saved >= s.needed ? HUD.metColour : HUD.colour);
     this.aboard.setText(`ABOARD ${s.aboard}/${s.capacity}`);
     this.score.setText(`SCORE ${s.score}`);
     this.lives.setText(`HELI x${s.lives}`);

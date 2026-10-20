@@ -1,14 +1,16 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, HUD, RESULT } from '../config/tuning';
-import type { MissionStart } from '../logic/progress';
+import type { MissionEndKind, MissionStart } from '../logic/progress';
 import type { MissionResult } from '../logic/score';
 import { play } from './sound';
 import type { VictoryData } from './VictoryScene';
 
 /** What the game scene hands the result screen. */
 export interface ResultData {
-  /** Everyone saved or lost, or no helicopters left. */
-  kind: 'complete' | 'gameover';
+  /** Enough people saved, too few (the 70% rule), or no helicopters left. */
+  kind: MissionEndKind;
+  /** How many had to be saved (70% of everyone, rounded up). */
+  needed: number;
   /** This mission's points. */
   result: MissionResult;
   /** The mission (from 1) and its name. */
@@ -37,9 +39,10 @@ export interface ResultSnapshot extends ResultData {
 /**
  * The end of a mission (roadmap M3.2, M3.3): a panel over the paused game
  * with the people saved, the points, the bonus, the score and the high score;
- * or GAME OVER when no helicopters are left. Enter, Space or a tap goes on
- * to the next mission (M5.1), or after a game over plays the mission again
- * with the score it was entered with (Retry).
+ * MISSION FAILED when too few can be saved (70% rule, owner 2026-10-20); or
+ * GAME OVER when no helicopters are left. Enter, Space or a tap goes on to the
+ * next mission (M5.1), or after a failed mission or a game over plays the
+ * mission again with the score it was entered with (Retry).
  */
 export class ResultScene extends Phaser.Scene {
   private data_!: ResultData;
@@ -57,24 +60,37 @@ export class ResultScene extends Phaser.Scene {
 
   create(): void {
     const { kind, result: r, highScore, newHigh, touch, mission, name } = this.data_;
-    const { startScore, total, next } = this.data_;
-    play(this, kind === 'gameover' ? 'sfx-game-over' : 'sfx-complete');
+    const { startScore, total, next, needed } = this.data_;
+    const over = kind !== 'complete';
+    play(this, over ? 'sfx-game-over' : 'sfx-complete');
     const R = RESULT;
 
-    const over = kind === 'gameover';
-    const title = over ? 'GAME OVER' : r.lost === 0 ? 'PERFECT RESCUE!' : 'MISSION COMPLETE';
+    const title =
+      kind === 'gameover'
+        ? 'GAME OVER'
+        : kind === 'failed'
+          ? 'MISSION FAILED'
+          : r.lost === 0
+            ? 'PERFECT RESCUE!'
+            : 'MISSION COMPLETE';
     const action = over ? 'RETRY' : next || this.data_.victory ? 'CONTINUE' : 'PLAY AGAIN';
     const high = newHigh ? `NEW! ${highScore}` : `${highScore}`;
     type Row = [string, string, (string | undefined)?];
-    const middle: Row[] = over
-      ? [
-          ['NO HELICOPTERS LEFT', ''],
-          ['', ''],
-        ]
-      : [
-          ['BONUS', `${r.bonus}`],
-          ['PERFECT', `${r.perfect}`],
-        ];
+    const middle: Row[] =
+      kind === 'gameover'
+        ? [
+            ['NO HELICOPTERS LEFT', ''],
+            ['', ''],
+          ]
+        : kind === 'failed'
+          ? [
+              [`SAVE AT LEAST ${needed}`, '', RESULT.danger],
+              ['', ''],
+            ]
+          : [
+              ['BONUS', `${r.bonus}`],
+              ['PERFECT', `${r.perfect}`],
+            ];
     // Score from earlier missions, once there is some (M5.1).
     const earlier: Row[] = startScore > 0 ? [['EARLIER MISSIONS', `${startScore}`]] : [];
     const rows: Row[] = [

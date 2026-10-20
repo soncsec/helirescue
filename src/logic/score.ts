@@ -81,3 +81,28 @@ export function gameOverResult(
 export function missionOver(t: { total: number; saved: number; lost: number }): boolean {
   return t.total > 0 && t.saved + t.lost >= t.total;
 }
+
+/**
+ * How many people must be saved for a mission to count as complete (owner's
+ * play-test, 2026-10-20): `share` of everyone, rounded up.
+ */
+export function peopleNeeded(total: number, share: number): number {
+  count(total, 'total');
+  if (!(share >= 0 && share <= 1)) throw new RangeError('share must be from 0 to 1');
+  // The small allowance keeps 0.7 × 10 = 7, not 8, despite floating-point error.
+  return Math.max(0, Math.ceil(total * share - 1e-9));
+}
+
+/**
+ * How the mission stands: 'failed' as soon as too many are lost for the rest
+ * to make up the number needed; 'complete' once everyone is saved or lost with
+ * enough saved; otherwise null (still flying).
+ */
+export function missionEnd(
+  t: { total: number; saved: number; lost: number },
+  share: number,
+): 'complete' | 'failed' | null {
+  const needed = peopleNeeded(t.total, share);
+  if (t.total - t.lost < needed) return 'failed';
+  return missionOver(t) ? 'complete' : null;
+}

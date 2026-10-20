@@ -17,7 +17,7 @@ A side-scrolling rescue game in the spirit of Choplifter. You fly a rescue helic
 | Helicopter | Health bar; a hard landing (touching down while still moving sideways fast) damages it; it cannot land on top of people. 3 helicopters per mission: losing all three is game over, and Retry restarts the current mission with 3 helicopters and the score you entered it with. |
 | Weapons | Forward-firing gun and bombs that drop straight down. Your own shots and bombs can hit the people too (they vanish and count as lost, no blood). No power-ups in v1. |
 | Enemies | Soldiers on rooftops and in the street (shoot at people running to the helicopter), tanks, anti-aircraft guns (shoot at the helicopter), enemy aircraft from mission 2 |
-| Missions | 5 missions that get harder. A mission ends when every person is rescued or lost. Progress is remembered: you can start from the furthest mission reached. |
+| Missions | 5 missions that get harder. A mission ends when every person is rescued or lost, and counts as complete only with at least 70% of its people saved (rounded up); it fails, with Retry, as soon as that is out of reach. Progress is remembered: you can start from the furthest mission reached. |
 | Session | About 3–5 minutes per mission |
 | Scoring | Points per person saved; a mission bonus scaled by the share of people saved, plus a perfect-rescue bonus; no penalty for losses. High score in localStorage (see section 3). |
 | Tone and setting | Near-future war zone, all ages, cartoon style. People fall over or vanish when hit, no blood. |
@@ -69,6 +69,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-20 | M5 plan: mission 2 becomes playable first (mission format, `difficulty()`, moving on to the next mission), then tanks, aircraft, missions 3–5 and the victory screen. Backdrops for missions 3–5 come from the same CC0 Ansimuz pack ("Urban landscape" and "Ocean View" day and night), shown to the owner side by side first. The VTOL jet appears from mission 2 and the gunship from mission 4. Tanks appear from mission 2 and fire up at the helicopter when it is low or landed; mission 1 stays as play-tested |
 | 2026-10-20 | Backdrops for missions 3–5, picked from an in-game preview: 3 Downtown (Warped "Urban landscape", by day), 4 Harbour (Warped "Ocean View", day), 5 Mountain town (Gothicvania "night town", same CC0 Ansimuz collection), instead of Ocean View day and night for 4 and 5, so all five missions look different |
 | 2026-10-20 | `?mission=N` stays open in v1.0: any mission can be started from the address, so skipping ahead is allowed. The difficulty limits are recorded in ARCHITECTURE.md H4 |
+| 2026-10-20 | Owner's play-test: a mission needs at least 70% of its people saved (rounded up: 12 of 16 in mission 1). It fails as soon as too many are lost to reach that; Retry restarts it with the score it was entered with. The HUD shows NEED under SAVED (scope change) |
 
 ## 6. Open questions
 

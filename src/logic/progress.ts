@@ -1,9 +1,10 @@
 /**
  * Moving through the missions (roadmap M5.1). Plain TypeScript, unit tested.
  *
- * The score carries from one mission to the next. Retry after a game over
- * restarts the same mission with the score the player entered it with
- * (scope, owner 2026-10-18).
+ * The score carries from one mission to the next. Retry after a game over,
+ * or after a mission failed for too few people saved, restarts the same
+ * mission with the score the player entered it with (scope, owner 2026-10-18;
+ * the 70% rule, 2026-10-20).
  */
 
 /** What a mission starts with. */
@@ -19,14 +20,17 @@ export function nextMission(mission: number, count: number): number | null {
   return mission < count ? mission + 1 : null;
 }
 
+/** How a mission ended: enough people saved, too few (70% rule), or no helicopters left. */
+export type MissionEndKind = 'complete' | 'failed' | 'gameover';
+
 /** Where the result screen's button goes. */
 export function afterResult(
-  kind: 'complete' | 'gameover',
+  kind: MissionEndKind,
   start: MissionStart,
   total: number,
   count: number,
 ): MissionStart {
-  if (kind === 'gameover') return { ...start };
+  if (kind !== 'complete') return { ...start };
   const next = nextMission(start.mission, count);
   // After the last mission (the victory screen shows first): a new game from the first.
   return next === null ? { mission: 1, startScore: 0 } : { mission: next, startScore: total };
@@ -61,6 +65,6 @@ export function stepChoice(current: number, dir: -1 | 1, choices: readonly numbe
 }
 
 /** True when a win ends the whole game (the last mission): the victory screen comes next. */
-export function isVictory(kind: 'complete' | 'gameover', mission: number, count: number): boolean {
+export function isVictory(kind: MissionEndKind, mission: number, count: number): boolean {
   return kind === 'complete' && nextMission(mission, count) === null;
 }

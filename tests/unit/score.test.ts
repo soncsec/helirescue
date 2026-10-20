@@ -3,7 +3,9 @@ import { SCORING } from '../../src/config/tuning';
 import {
   gameOverResult,
   missionBonus,
+  missionEnd,
   missionOver,
+  peopleNeeded,
   missionResult,
   rescueScore,
 } from '../../src/logic/score';
@@ -88,6 +90,36 @@ describe('missionOver', () => {
     expect(missionOver({ total: 16, saved: 10, lost: 6 })).toBe(true);
     expect(missionOver({ total: 16, saved: 15, lost: 0 })).toBe(false);
     expect(missionOver({ total: 0, saved: 0, lost: 0 })).toBe(false);
+  });
+});
+
+describe('the 70% rule (owner, 2026-10-20)', () => {
+  it('peopleNeeded is the share of everyone, rounded up', () => {
+    expect(peopleNeeded(16, 0.7)).toBe(12); // 11.2
+    expect(peopleNeeded(10, 0.7)).toBe(7); // exactly 7, despite floating point
+    expect(peopleNeeded(20, 0.7)).toBe(14);
+    expect(peopleNeeded(25, 0.7)).toBe(18); // 17.5
+    expect(peopleNeeded(0, 0.7)).toBe(0);
+    expect(() => peopleNeeded(10, 1.5)).toThrow(RangeError);
+    expect(() => peopleNeeded(-1, 0.7)).toThrow(RangeError);
+  });
+
+  it('complete only once everyone is saved or lost with enough saved', () => {
+    expect(missionEnd({ total: 16, saved: 12, lost: 4 }, 0.7)).toBe('complete');
+    expect(missionEnd({ total: 16, saved: 16, lost: 0 }, 0.7)).toBe('complete');
+    // Enough saved, but people still waiting: keep flying for more points.
+    expect(missionEnd({ total: 16, saved: 12, lost: 0 }, 0.7)).toBeNull();
+  });
+
+  it('fails as soon as too many are lost for the rest to make up the number', () => {
+    // 16 people, 12 needed: losing 4 still leaves exactly enough; losing 5 does not.
+    expect(missionEnd({ total: 16, saved: 0, lost: 4 }, 0.7)).toBeNull();
+    expect(missionEnd({ total: 16, saved: 0, lost: 5 }, 0.7)).toBe('failed');
+    expect(missionEnd({ total: 16, saved: 11, lost: 5 }, 0.7)).toBe('failed');
+  });
+
+  it('every mission needs 70% of its people', () => {
+    expect(SCORING.neededShare).toBe(0.7);
   });
 });
 

@@ -106,7 +106,13 @@ import {
   type WeaponEvent,
   type Weapons,
 } from '../logic/weapons';
-import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
+import {
+  gameOverResult,
+  missionEnd,
+  missionResult,
+  peopleNeeded,
+  rescueScore,
+} from '../logic/score';
 import { recordProgress, recordScore } from '../logic/save';
 import { difficulty, type Foes } from '../logic/difficulty';
 import {
@@ -545,7 +551,9 @@ export class GameScene extends Phaser.Scene {
     this.people = moved.people;
     for (const e of moved.events) this.onPeopleEvent(e);
     this.drawPeople();
-    if (!this.over && missionOver(tally(this.people))) this.endMission('complete');
+    // Everyone saved or lost with 70% saved, or too many lost to reach it (owner, 2026-10-20).
+    const end = this.over ? null : missionEnd(tally(this.people), SCORING.neededShare);
+    if (end) this.endMission(end);
     if (!this.over && this.wreckedFor !== null) {
       this.wreckedFor += dt;
       if (this.wreckedFor >= LIVES.gameOverSeconds) this.endMission('gameover');
@@ -648,6 +656,7 @@ export class GameScene extends Phaser.Scene {
       maxHealth: LANDING.maxHealth,
       saved: t.saved,
       total: t.total,
+      needed: peopleNeeded(t.total, SCORING.neededShare),
       aboard: t.aboard,
       capacity: PEOPLE.capacity,
       score: this.start.startScore + rescueScore(t.saved, SCORING),
@@ -682,8 +691,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * The mission is over: everyone saved or lost ('complete'), or no
-   * helicopters left ('gameover'). Freeze the game and show the result.
+   * The mission is over: everyone saved or lost with enough saved
+   * ('complete'), too many lost to save 70% ('failed'), or no helicopters left
+   * ('gameover'). Freeze the game and show the result.
    */
   private endMission(kind: ResultData['kind']): void {
     this.over = true;
@@ -700,6 +710,7 @@ export class GameScene extends Phaser.Scene {
     if (isNew || progress.changed) storeSave(data);
     const show: ResultData = {
       kind,
+      needed: peopleNeeded(t.total, SCORING.neededShare),
       result,
       mission,
       name: missionAt(mission).name,

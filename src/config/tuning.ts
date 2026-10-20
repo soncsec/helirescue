@@ -106,6 +106,11 @@ export const SCORING = {
   perPerson: 100,
   missionBonus: 1000,
   perfectBonus: 500,
+  /**
+   * A mission counts as complete only with at least 70% of its people saved,
+   * rounded up (owner's play-test, 2026-10-20); it fails once that is out of reach.
+   */
+  neededShare: 0.7,
 } as const;
 
 /**
@@ -418,6 +423,9 @@ export const HUD = {
   /** Helicopters left: under the health bar. */
   livesX: 6,
   livesY: 14,
+  /** "NEED 12" under SAVED (70% rule), green once that many are saved. */
+  neededY: 14,
+  metColour: '#5fd35f',
   scoreRight: 474,
   /** "+100" popup when someone is saved: rise (px) and duration (ms). */
   popupRise: 18,
