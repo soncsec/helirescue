@@ -68,18 +68,21 @@ test('a tank fires up at a low helicopter and its shells take health', async ({ 
   // Low and to one side of the tank, inside the yard, in its barrel's reach.
   const x = k.x >= 960 ? k.x - 110 : k.x + 110;
   const y = 170;
-  await fly(page, { kind: 'move', x, floorY: FLOOR, controls: 'keys', untilHits: 1 });
-  await fly(page, { kind: 'move', x, y, floorY: FLOOR, controls: 'keys', untilHits: 1 });
+  // Stop on a tank shell's hit, not any hit: a gun passed on the way may already have hit.
+  const until = { untilEvent: 'tank-hit' } as const;
+  await fly(page, { kind: 'move', x, floorY: FLOOR, controls: 'keys', ...until });
+  await fly(page, { kind: 'move', x, y, floorY: FLOOR, controls: 'keys', ...until });
   await fly(page, {
     kind: 'hold',
     x,
     y,
     floorY: FLOOR,
     controls: 'keys',
-    untilHits: 1,
+    ...until,
     forMs: 30_000,
   });
   const s = await snapshot(page);
+  expect(s.events).toContain('tank-hit');
   expect(s.enemies.hitsTaken).toBeGreaterThan(0);
   expect(s.health).toBeLessThan(100);
   // It turned to face the helicopter.
