@@ -16,6 +16,12 @@ https://ansimuz.itch.io/ (shared art pack, `legacy/`)
 - `assets/backgrounds/city-sky.png`, `assets/backgrounds/city-far.png`, `assets/backgrounds/city-near.png`: Warped, Synth City (city skyline layers)
 - `assets/backgrounds/industrial-sky.png`, `assets/backgrounds/industrial-far.png`, `assets/backgrounds/industrial-near.png`: Warped, parallax-industrial
 
+Mission backdrops picked by the owner from an in-game preview (M5.4, 2026-10-20), unchanged:
+
+- `assets/backgrounds/downtown-sky.png`, `assets/backgrounds/downtown-far.png`: Warped, Urban-landscape (Sky-layer, buildings-layer)
+- `assets/backgrounds/harbour-sky.png`, `assets/backgrounds/harbour-clouds.png`, `assets/backgrounds/harbour-near.png`: Warped, Ocean View, Day (Back, Clouds, Middle)
+- `assets/backgrounds/mountain-sky.png`, `assets/backgrounds/mountain-far.png`, `assets/backgrounds/mountain-houses.png`, `assets/backgrounds/mountain-town.png`: Gothicvania, night-town-background (sky, mountains, far-buildings, town)
+
 Recoloured from the pack by `tools/art/recolour.mjs` (still CC0):
 
 - `assets/sprites/civilian-blue-walk.png`, `assets/sprites/civilian-green-walk.png`, `assets/sprites/civilian-yellow-walk.png`: Warped, cyberpunk-detective (walk)

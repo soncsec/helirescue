@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY, ENEMIES, JETS, SOLDIERS, TANKS } from '../../src/config/tuning';
+import { DIFFICULTY, ENEMIES, GUNSHIPS, JETS, SOLDIERS, TANKS } from '../../src/config/tuning';
 import { DIFFICULTY_LIMITS, difficulty } from '../../src/logic/difficulty';
 
-const base = { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS, jets: JETS };
+const base = { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS, jets: JETS, gunships: GUNSHIPS };
 const at = (
   m: number,
-): ReturnType<typeof difficulty<typeof ENEMIES, typeof SOLDIERS, typeof TANKS, typeof JETS>> =>
-  difficulty(m, base, DIFFICULTY);
+): ReturnType<
+  typeof difficulty<typeof ENEMIES, typeof SOLDIERS, typeof TANKS, typeof JETS, typeof GUNSHIPS>
+> => difficulty(m, base, DIFFICULTY);
 const missions = Array.from({ length: DIFFICULTY.lastMission }, (_, i) => i + 1);
 const avgReload = (r: { aaReloadMin: number; aaReloadMax: number }): number =>
   (r.aaReloadMin + r.aaReloadMax) / 2;
@@ -23,6 +24,15 @@ describe('difficulty', () => {
     for (const m of missions) {
       const { enemies: e, soldiers: s, tanks: k } = at(m);
       expect(TANKS.reloadMin / k.reloadMin).toBeLessThanOrEqual(2 + 1e-9);
+      const gs = at(m).gunships;
+      expect(GUNSHIPS.reloadMin / gs.reloadMin).toBeLessThanOrEqual(2 + 1e-9);
+      expect(gs.shotSpeed / GUNSHIPS.shotSpeed).toBeLessThanOrEqual(1.3 + 1e-9);
+      expect(gs.range / GUNSHIPS.range).toBeLessThanOrEqual(1.2 + 1e-9);
+      expect(gs).toMatchObject({
+        shotDamage: GUNSHIPS.shotDamage,
+        hp: GUNSHIPS.hp,
+        burst: GUNSHIPS.burst,
+      });
       expect(at(m).jets.shotSpeed / JETS.shotSpeed).toBeLessThanOrEqual(1.3 + 1e-9);
       expect(at(m).jets).toMatchObject({
         shotDamage: JETS.shotDamage,

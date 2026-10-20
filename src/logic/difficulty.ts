@@ -5,7 +5,7 @@
  * numbers (which the owner play-tested and approved), so the limits are
  * checked in one place:
  * - mission 1 is exactly the base numbers;
- * - guns, soldiers and tanks fire more often each mission, by the same percentage
+ * - guns, soldiers, tanks and gunships fire more often each mission, by the same percentage
  *   each time, reaching at most twice mission 1's rate at the last mission;
  * - their shots get faster, at most 30% faster by the last mission;
  * - they open fire from further away, at most 20% further by the last mission;
@@ -15,6 +15,7 @@
  */
 import type { EnemyTuning } from './enemies';
 import type { SoldierTuning } from './soldiers';
+import type { GunshipTuning } from './gunships';
 import type { JetTuning } from './jets';
 import type { TankTuning } from './tanks';
 
@@ -41,12 +42,14 @@ export interface Foes<
   S extends SoldierTuning,
   K extends TankTuning,
   J extends JetTuning,
+  G extends GunshipTuning,
 > {
   enemies: E;
   soldiers: S;
   tanks: K;
   /** Jet passes come as often as the map says; their shots get faster. */
   jets: J;
+  gunships: G;
 }
 
 /** The enemy numbers for `mission` (1 to the last mission). */
@@ -55,7 +58,8 @@ export function difficulty<
   S extends SoldierTuning,
   K extends TankTuning,
   J extends JetTuning,
->(mission: number, base: Foes<E, S, K, J>, curve: DifficultyCurve): Foes<E, S, K, J> {
+  G extends GunshipTuning,
+>(mission: number, base: Foes<E, S, K, J, G>, curve: DifficultyCurve): Foes<E, S, K, J, G> {
   if (!Number.isInteger(mission) || mission < 1 || mission > curve.lastMission) {
     throw new RangeError(`mission must be a whole number from 1 to ${curve.lastMission}`);
   }
@@ -91,5 +95,12 @@ export function difficulty<
       range: k.range * range,
     },
     jets: { ...base.jets, shotSpeed: base.jets.shotSpeed * speed },
+    gunships: {
+      ...base.gunships,
+      reloadMin: base.gunships.reloadMin / rate,
+      reloadMax: base.gunships.reloadMax / rate,
+      shotSpeed: base.gunships.shotSpeed * speed,
+      range: base.gunships.range * range,
+    },
   };
 }

@@ -1,3 +1,4 @@
+import type { Theme } from '../logic/world';
 /**
  * Art manifest: every sprite sheet and image the game loads, its frame size
  * and where it came from (chosen in the M1 art test). A unit test checks each
@@ -270,7 +271,131 @@ export const IMAGES: readonly ImageSpec[] = [
     label: 'Industrial, near',
     source: 'Pack',
   },
+  // Missions 3 to 5 (M5.4), picked by the owner from an in-game preview.
+  {
+    key: 'downtown-sky',
+    file: `${backgrounds}downtown-sky.png`,
+    width: 112,
+    height: 224,
+    label: 'Downtown sky',
+    source: 'Pack',
+  },
+  {
+    key: 'downtown-far',
+    file: `${backgrounds}downtown-far.png`,
+    width: 192,
+    height: 129,
+    label: 'Downtown skyline',
+    source: 'Pack',
+  },
+  {
+    key: 'harbour-sky',
+    file: `${backgrounds}harbour-sky.png`,
+    width: 336,
+    height: 240,
+    label: 'Harbour sky and sea',
+    source: 'Pack',
+  },
+  {
+    key: 'harbour-clouds',
+    file: `${backgrounds}harbour-clouds.png`,
+    width: 320,
+    height: 240,
+    label: 'Harbour clouds',
+    source: 'Pack',
+  },
+  {
+    key: 'harbour-near',
+    file: `${backgrounds}harbour-near.png`,
+    width: 144,
+    height: 240,
+    label: 'Harbour, near',
+    source: 'Pack',
+  },
+  {
+    key: 'mountain-sky',
+    file: `${backgrounds}mountain-sky.png`,
+    width: 96,
+    height: 224,
+    label: 'Mountain sky',
+    source: 'Pack',
+  },
+  {
+    key: 'mountain-far',
+    file: `${backgrounds}mountain-far.png`,
+    width: 96,
+    height: 224,
+    label: 'Mountains',
+    source: 'Pack',
+  },
+  {
+    key: 'mountain-houses',
+    file: `${backgrounds}mountain-houses.png`,
+    width: 320,
+    height: 80,
+    label: 'Mountain town, far',
+    source: 'Pack',
+  },
+  {
+    key: 'mountain-town',
+    file: `${backgrounds}mountain-town.png`,
+    width: 512,
+    height: 99,
+    label: 'Mountain town, near',
+    source: 'Pack',
+  },
 ];
+
+/**
+ * Each mission theme's look (M5.4): its background layers, back to front,
+ * each with how fast it moves relative to the camera (parallax), and the
+ * building tiles drawn in front.
+ */
+export const THEMES: Record<
+  Theme,
+  { layers: readonly { key: string; factor: number }[]; tiles: 'buildings-night' | 'buildings-war' }
+> = {
+  night: {
+    layers: [
+      { key: 'city-sky', factor: 0.1 },
+      { key: 'city-far', factor: 0.3 },
+      { key: 'city-near', factor: 0.6 },
+    ],
+    tiles: 'buildings-night',
+  },
+  war: {
+    layers: [
+      { key: 'industrial-sky', factor: 0.1 },
+      { key: 'industrial-far', factor: 0.3 },
+      { key: 'industrial-near', factor: 0.6 },
+    ],
+    tiles: 'buildings-war',
+  },
+  downtown: {
+    layers: [
+      { key: 'downtown-sky', factor: 0.1 },
+      { key: 'downtown-far', factor: 0.4 },
+    ],
+    tiles: 'buildings-war',
+  },
+  harbour: {
+    layers: [
+      { key: 'harbour-sky', factor: 0.1 },
+      { key: 'harbour-clouds', factor: 0.2 },
+      { key: 'harbour-near', factor: 0.5 },
+    ],
+    tiles: 'buildings-war',
+  },
+  mountain: {
+    layers: [
+      { key: 'mountain-sky', factor: 0.05 },
+      { key: 'mountain-far', factor: 0.15 },
+      { key: 'mountain-houses', factor: 0.3 },
+      { key: 'mountain-town', factor: 0.5 },
+    ],
+    tiles: 'buildings-war',
+  },
+};
 
 /** Building tile frames, in the order tools/art/buildings.mjs draws them. */
 export const TILE = {

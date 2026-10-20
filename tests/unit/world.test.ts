@@ -23,6 +23,8 @@ const limits = {
   personHalfWidth: 6,
   tankHalfWidth: 50,
   jetGap: 15,
+  gunshipHalfWidth: 48,
+  gunshipHalfHeight: 31,
 };
 const b = (x: number, width = 4, height = 3): WorldMap['buildings'][number] => ({
   x,
@@ -223,6 +225,27 @@ describe('tanks on the map (M5.2)', () => {
   });
 });
 
+describe('gunships on the map (M5.3)', () => {
+  // Buildings at 200..328 and 400..528, roofs at y 206 (3 tiles); the world is 960 wide.
+  const at = (gunships: { x: number; y: number; patrol: number }[]): WorldMap =>
+    map({ buildings: [b(200, 8), b(400, 8)], gunships });
+  it('hover above the roofs they pass over, inside the world', () => {
+    expect(worldProblems(at([{ x: 400, y: 60, patrol: 100 }]), limits)).toEqual([]);
+    expect(worldProblems(at([{ x: 400, y: 180, patrol: 100 }]), limits)).toEqual([
+      'gunship 0 flies into a roof',
+    ]);
+    expect(worldProblems(at([{ x: 900, y: 60, patrol: 40 }]), limits)).toEqual([
+      'gunship 0 flies outside the world',
+    ]);
+    expect(worldProblems(at([{ x: 400, y: 20, patrol: 40 }]), limits)).toEqual([
+      'gunship 0 flies outside the world',
+    ]);
+    expect(worldProblems(at([{ x: 400, y: 60, patrol: -5 }]), limits)).toEqual([
+      'gunship 0 has a negative patrol',
+    ]);
+  });
+});
+
 describe('jets on the map (M5.3)', () => {
   it('come now and then, never in a stream', () => {
     expect(worldProblems(map({ jets: { first: 20, every: 30 } }), limits)).toEqual([]);
@@ -280,6 +303,10 @@ describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({
     expect(m.jets !== undefined).toBe(n >= 2);
   });
 
+  it('has gunships from mission 4 (M5.3)', () => {
+    expect((m.gunships?.length ?? 0) > 0).toBe(n >= 4);
+  });
+
   it('has at least as many people and enemies as the mission before', () => {
     const before = MISSIONS[n - 2]?.map;
     if (!before) return;
@@ -297,8 +324,10 @@ describe('missions', () => {
     expect(MISSION_1.theme).toBe('night');
   });
 
-  it('mission 2 is in the factory district', () => {
-    expect(missionAt(2).map.theme).toBe('war');
+  it('each mission has its own look (M5.4)', () => {
+    expect(MISSIONS.map((m) => m.map.theme)).toEqual(
+      ['night', 'war', 'downtown', 'harbour', 'mountain'].slice(0, MISSIONS.length),
+    );
   });
 
   it('has no more missions than the saved data and the difficulty curve allow', () => {

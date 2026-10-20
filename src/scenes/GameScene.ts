@@ -19,6 +19,7 @@ import {
   SOLDIERS,
   TANKS,
   JETS,
+  GUNSHIPS,
   WEAPONS,
   PEOPLE,
   PLAYER,
@@ -63,6 +64,14 @@ import {
   type Enemies,
 } from '../logic/enemies';
 import { afterCrash } from '../logic/lives';
+import {
+  gunshipBox,
+  hitGunship,
+  newFleet,
+  updateGunships,
+  type Fleet,
+  type GunshipEvent,
+} from '../logic/gunships';
 import {
   hitJet,
   jetBox,
@@ -143,6 +152,7 @@ export interface GameSnapshot {
     | 'tank-destroyed'
     | 'jet-in'
     | 'jet-down'
+    | 'gunship-down'
   )[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
@@ -190,6 +200,18 @@ export interface GameSnapshot {
     jetShots: number;
     jetWarning: Warning | null;
     nextPass: number;
+    /** Gunships (M5.3) and their shots flying now. */
+    gunships: {
+      x: number;
+      y: number;
+      alive: boolean;
+      hp: number;
+      facing: 1 | -1;
+      engaged: boolean;
+    }[];
+    gunshipShots: number;
+    /** Shots gunships have fired so far. */
+    gunshipFired: number;
   };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
@@ -272,7 +294,12 @@ export class GameScene extends Phaser.Scene {
   /** The mission and the score brought into it (M5.1). */
   private start: MissionStart = { mission: 1, startScore: 0 };
   /** This mission's enemy numbers, from difficulty(). */
-  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS, typeof TANKS, typeof JETS>;
+  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS, typeof TANKS, typeof JETS, typeof GUNSHIPS>;
+  /** Gunships and their shots (pooled), with their sprites. */
+  private fleet!: Fleet;
+  private gunshipSprites: Phaser.GameObjects.Sprite[] = [];
+  private gunshipShotSprites: Phaser.GameObjects.Sprite[] = [];
+  private gunshipFired = 0;
   /** Enemy jets and their shots (pooled), with their sprites and the warning marker. */
   private sky!: Sky;
   private jetSprites: Phaser.GameObjects.Sprite[] = [];
@@ -300,7 +327,7 @@ export class GameScene extends Phaser.Scene {
     this.map = missionAt(mission).map;
     this.foe = difficulty(
       mission,
-      { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS, jets: JETS },
+      { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS, jets: JETS, gunships: GUNSHIPS },
       DIFFICULTY,
     );
   }
@@ -370,6 +397,7 @@ export class GameScene extends Phaser.Scene {
     this.makeSquad();
     this.makeTanks();
     this.makeJets();
+    this.makeGunships();
     this.startRotor();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
@@ -486,6 +514,15 @@ export class GameScene extends Phaser.Scene {
       this.rng,
     );
     for (const e of sky) this.onJetEvent(e);
+    const fleet = updateGunships(
+      this.fleet,
+      this.heli,
+      dt,
+      this.arena(),
+      this.foe.gunships,
+      this.rng,
+    );
+    for (const e of fleet) this.onGunshipEvent(e);
     const out = this.people.filter(exposed).map((p) => ({
       id: p.id,
       x: p.x,
@@ -574,6 +611,16 @@ export class GameScene extends Phaser.Scene {
         jetShots: this.sky.shots.filter((s) => s.alive).length,
         jetWarning: this.sky.warning ? { ...this.sky.warning } : null,
         nextPass: this.sky.nextPass,
+        gunships: this.fleet.ships.map((g) => ({
+          x: g.x,
+          y: g.y,
+          alive: g.alive,
+          hp: g.hp,
+          facing: g.facing,
+          engaged: g.engaged,
+        })),
+        gunshipShots: this.fleet.shots.filter((s) => s.alive).length,
+        gunshipFired: this.gunshipFired,
       },
       input: {
         touch: this.touch !== null,
@@ -847,12 +894,13 @@ export class GameScene extends Phaser.Scene {
       buildings: this.roofs,
       groundY: this.world.groundY,
       width: this.map.width,
-      // Guns, soldiers, tanks, jets, then people: a hit's target index says which.
+      // Guns, soldiers, tanks, jets, gunships, then people: a hit's target index says which.
       targets: [
         ...this.enemies.guns.map((g) => gunBox(g, this.foe.enemies)),
         ...this.squad.soldiers.map((s) => soldierBox(s, this.foe.soldiers)),
         ...this.armour.tanks.map((k) => tankBox(k, this.foe.tanks)),
         ...this.sky.jets.map((j) => jetBox(j, this.foe.jets)),
+        ...this.fleet.ships.map((g) => gunshipBox(g, this.foe.gunships)),
         // Our own fire hits people too (owner, 2026-10-19).
         ...this.people.map((p) => personBox(p, PEOPLE)),
       ],
@@ -988,6 +1036,43 @@ export class GameScene extends Phaser.Scene {
       .setDepth(3)
       .setShadow(1, 1, HUD.shadow, 0, false, true)
       .setVisible(false);
+  }
+
+  /** The mission's gunships, their shot pool, and their sprites (M5.3). */
+  private makeGunships(): void {
+    this.fleet = newFleet(
+      (this.map.gunships ?? []).map((g) => ({
+        x: g.x,
+        y: g.y,
+        minX: g.x - g.patrol,
+        maxX: g.x + g.patrol,
+      })),
+      this.foe.gunships,
+    );
+    this.gunshipSprites = this.fleet.ships.map((g) =>
+      this.add.sprite(g.x, g.y, 'gunship').play('gunship').setDepth(1),
+    );
+    this.gunshipFired = 0;
+    this.gunshipShotSprites = this.fleet.shots.map(() =>
+      this.add.sprite(0, 0, 'bullet').setTint(GUNSHIPS.shotTint).setVisible(false).setDepth(2),
+    );
+  }
+
+  private onGunshipEvent(e: GunshipEvent): void {
+    if (e.kind === 'heli-hit' || e.kind === 'burst') {
+      this.onEnemyEvent(e);
+      return;
+    }
+    if (e.kind === 'gunship-fired') {
+      this.gunshipFired++;
+      play(this, 'sfx-soldier-shot');
+      return;
+    }
+    this.log('gunship-down');
+    play(this, 'sfx-blast');
+    const fx = this.blasts[this.nextBlast++ % this.blasts.length];
+    fx?.setPosition(e.x, e.y).setOrigin(0.5).setVisible(true).play({ key: 'explosion', repeat: 0 });
+    this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
   }
 
   /**
@@ -1126,6 +1211,17 @@ export class GameScene extends Phaser.Scene {
       sprite?.setVisible(s.alive);
       if (s.alive) sprite?.setPosition(s.x, s.y);
     });
+    this.fleet.ships.forEach((g, i) => {
+      this.gunshipSprites[i]
+        ?.setVisible(g.alive)
+        .setPosition(g.x, g.y)
+        .setFlipX(g.facing < 0);
+    });
+    this.fleet.shots.forEach((s, i) => {
+      const sprite = this.gunshipShotSprites[i];
+      sprite?.setVisible(s.alive);
+      if (s.alive) sprite?.setPosition(s.x, s.y).setFlipX(s.vx < 0);
+    });
     this.sky.jets.forEach((j, i) => {
       const sprite = this.jetSprites[i];
       sprite?.setVisible(j.alive);
@@ -1172,6 +1268,7 @@ export class GameScene extends Phaser.Scene {
         const soldiers = guns + this.squad.soldiers.length;
         const tanks = soldiers + this.armour.tanks.length;
         const jets = tanks + this.sky.jets.length;
+        const ships = jets + this.fleet.ships.length;
         if (e.target < guns) {
           const destroyed = hitGun(this.enemies, e.target, 1);
           if (destroyed) this.onEnemyEvent(destroyed);
@@ -1184,8 +1281,11 @@ export class GameScene extends Phaser.Scene {
         } else if (e.target < jets) {
           const down = hitJet(this.sky, e.target - tanks, 1);
           if (down) this.onJetEvent(down);
+        } else if (e.target < ships) {
+          const down = hitGunship(this.fleet, e.target - jets, 1);
+          if (down) this.onGunshipEvent(down);
         } else {
-          const p = this.people[e.target - jets];
+          const p = this.people[e.target - ships];
           if (p) this.friendlyFire(p.id);
         }
       }
