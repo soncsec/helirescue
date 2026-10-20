@@ -75,18 +75,20 @@ test('controls work straight away, even while the music is still loading', async
   await expect.poll(async () => (await sound(page))?.loaded, WAIT).toContain('music');
 });
 
-test('M turns sound off and on, and the choice is remembered', async ({ page }) => {
+test('M turns sound off and on, and the choice is remembered', async ({ page: first, context }) => {
   test.slow();
-  await openTitle(page);
-  await page.keyboard.press('m');
-  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(true);
-  expect((await page.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(
+  await openTitle(first);
+  await first.keyboard.press('m');
+  await expect.poll(async () => (await sound(first))?.muted, WAIT).toBe(true);
+  expect((await first.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(
     'M SOUND: OFF',
   );
   expect(
-    await page.evaluate(() => JSON.parse(localStorage.getItem('helirescue') ?? '{}').muted),
+    await first.evaluate(() => JSON.parse(localStorage.getItem('helirescue') ?? '{}').muted),
   ).toBe(true);
-  await page.reload();
+  // Come back later: a new page in the same browser, with the same saved data.
+  await first.close();
+  const page = await context.newPage();
   await openTitle(page);
   expect((await sound(page))?.muted).toBe(true);
   // Muted, firing plays nothing.
