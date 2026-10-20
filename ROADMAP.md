@@ -11,8 +11,8 @@
 | M0 Setup | Done (2026-10-18) |
 | M1 Art test | Done |
 | M2 Walking skeleton (to production) | Done (2026-10-19) |
-| M3 Mission 1 playable | Done (2026-10-19); landing re-test after the next release |
-| M4 Sound | Built; waiting for the owner to listen (release) |
+| M3 Mission 1 playable | Done (2026-10-19) |
+| M4 Sound | Done (2026-10-19) |
 | M5 Missions 2–5 | Not started |
 | M6 Polish and v1.0 release | Not started |
 
@@ -93,6 +93,7 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
   - [x] Title screen with the controls for the device, the high score and the CC-BY credit; pause with P or Esc, a touch pause button, and on focus loss (PR #19)
   - [x] CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, replacing the credit line on the title (owner, 2026-10-19)
   - [x] The owner play-tests mission 1 (2026-10-19, with enemies): flying good; difficulty good to start; scoring good; smooth on iPhone. Landing was not intuitive (holding Down caused damage), so landing now flares near a landing spot and hard landings come from sliding (PR #30)
+  - [x] The owner re-tests the new landing on the live site: all good (2026-10-19)
 - [x] M3.5 Turn key and button, forward gun and bombs, with pooled bullets and effects
   - [x] Turn: C or the touch Turn button turns the helicopter around (airborne only); flying no longer turns it, so it can fly backwards
   - [x] Forward gun (Z or Space, held) and bombs (X) with pooled shots and effects; FIRE and BOMB touch buttons; Claude-made bullet, bomb and spark sprites
@@ -110,10 +111,12 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 - [x] M4.1 Sources listed for the owner's approval; generated effects where they fit
   - [x] Sound effects: Kenney's CC0 "Sci-fi Sounds" and "Digital SFX" packs, built like Contro (fingerprint-checked download; OGG plus an M4A copy for iPhone) (owner, 2026-10-19)
   - [x] Music: "Dark Happy World" by ansimuz (CC0), picked by the owner from three candidates (2026-10-19)
-  - [x] `tools/audio/build_audio.py` builds 18 sounds as Ogg and M4A (1.97 MB in all) from the SHA-256-checked packs and writes the CREDITS.md table; the repo check enforces the 3 MB budget
+  - [x] `tools/audio/build_audio.py` builds 18 sounds as Ogg and M4A (1.63 MB in all) from the SHA-256-checked packs and writes the CREDITS.md table; the repo check enforces the 3 MB budget
 - [x] M4.2 Sound starts on the first key press or tap; mute, remembered in the saved-data key (H9): M on a keyboard, a SOUND button on the touch title and pause screens; a rotor hum that follows the helicopter, and a sound for every game event
 
 **Acceptance criteria:** every sound plays in Chrome and Firefox; every licence is recorded; audio under 3 MB.
+
+**Accepted** by the owner on 2026-10-19 after listening on the live site.
 
 ## M5 — Missions 2–5
 
