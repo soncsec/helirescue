@@ -1,6 +1,6 @@
 /**
  * In-game credits (owner, 2026-10-19): a CREDITS screen reachable from the
- * title at any time, and scrolling credits at the end of the game (M5.4).
+ * title at any time, and scrolling credits at the end of the game (M5.5).
  * CC-BY art is credited in full here: author, title, link to the original,
  * licence and what was changed. Every file is listed in CREDITS.md.
  */

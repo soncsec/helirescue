@@ -64,8 +64,9 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-19 | Sound (M4): Kenney's CC0 sound-effect packs, built like Contro (OGG plus M4A for iPhone, packs checked by SHA-256); one CC0 music loop by ansimuz, not Contro's, chosen by the owner; within the 3 MB audio budget |
 | 2026-10-19 | Friendly fire: the helicopter's own bullets and bombs can hit the people (lost, no blood), as in Choplifter (scope change) |
 | 2026-10-19 | Street soldiers' shots pass the edge of the roof their target stands on (other buildings still block them), so they are a real threat to people on roofs |
-| 2026-10-19 | Credits: a CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, and scrolling credits at the end of the game (M5.4); the title no longer carries the credit line |
+| 2026-10-19 | Credits: a CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, and scrolling credits at the end of the game (M5.5); the title no longer carries the credit line |
 | 2026-10-19 | M3.7 frame-rate check: an automated frame-time budget test (our per-frame work in a busy scene), plus the owner's play-test on real devices |
+| 2026-10-20 | M5 plan: mission 2 becomes playable first (mission format, `difficulty()`, moving on to the next mission), then tanks, aircraft, missions 3–5 and the victory screen. Backdrops for missions 3–5 come from the same CC0 Ansimuz pack ("Urban landscape" and "Ocean View" day and night), shown to the owner side by side first. The VTOL jet appears from mission 2 and the gunship from mission 4. Tanks appear from mission 2 and fire up at the helicopter when it is low or landed; mission 1 stays as play-tested |
 
 ## 6. Open questions
 

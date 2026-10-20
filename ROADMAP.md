@@ -13,7 +13,7 @@
 | M2 Walking skeleton (to production) | Done (2026-10-19) |
 | M3 Mission 1 playable | Done (2026-10-19) |
 | M4 Sound | Done (2026-10-19) |
-| M5 Missions 2–5 | Not started |
+| M5 Missions 2–5 | In progress |
 | M6 Polish and v1.0 release | Not started |
 
 ## Risks driving this order
@@ -122,10 +122,13 @@ The frame of a mission comes first (M3.1–M3.4), so the owner can play-test a w
 
 **Demonstrable result:** all five missions playable, each with its own setting and harder enemies.
 
-- [ ] M5.1 Mission data format and `difficulty()` with tested limits (H4)
-- [ ] M5.2 Tanks, and enemy aircraft from mission 2
-- [ ] M5.3 A background and layout for each mission
-- [ ] M5.4 Progress through missions; start from the furthest mission reached (H9); final victory screen with scrolling credits (owner, 2026-10-19)
+Order agreed with the owner on 2026-10-20: mission 2 is playable after the first task.
+
+- [ ] M5.1 Mission data format and `difficulty()` with tested limits (H4); mission 2 (industrial backdrop, today's enemy types) and moving on to the next mission after a win
+- [ ] M5.2 Tanks from mission 2: they drive along the street and fire shells up at the helicopter when it is low or landed; a bomb or 4 bullets destroys one
+- [ ] M5.3 Enemy aircraft: the VTOL jet from mission 2 (fast strafing passes), the gunship from mission 4 (hovers and fires bursts)
+- [ ] M5.4 Missions 3–5: layouts, plus backdrops from the CC0 pack (3 Urban landscape, 4 Ocean View day, 5 Ocean View night), shown to the owner side by side before they are added
+- [ ] M5.5 Start from the furthest mission reached (H9); final victory screen with scrolling credits (owner, 2026-10-19)
 
 **Acceptance criteria:** all 5 missions can be completed; difficulty limits enforced by tests; an e2e test loads each mission; the owner approves the difficulty curve.
 
