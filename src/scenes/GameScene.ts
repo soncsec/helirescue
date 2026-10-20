@@ -109,7 +109,13 @@ import {
 import { gameOverResult, missionOver, missionResult, rescueScore } from '../logic/score';
 import { recordProgress, recordScore } from '../logic/save';
 import { difficulty, type Foes } from '../logic/difficulty';
-import { afterResult, missionFromQuery, nextMission, type MissionStart } from '../logic/progress';
+import {
+  afterResult,
+  isVictory,
+  missionFromQuery,
+  nextMission,
+  type MissionStart,
+} from '../logic/progress';
 import { roofOf, roofUnder, soldierPost, type Roof } from '../logic/world';
 import { MISSIONS, missionAt } from '../missions';
 import type { WorldMap } from '../logic/world';
@@ -699,6 +705,7 @@ export class GameScene extends Phaser.Scene {
       startScore,
       total,
       next: next !== null,
+      victory: isVictory(kind, mission, MISSIONS.length),
       then: afterResult(kind, this.start, total, MISSIONS.length),
       highScore: data.highScore,
       newHigh: isNew,

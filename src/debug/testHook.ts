@@ -4,6 +4,7 @@ import type { CreditsScene, CreditsSnapshot } from '../scenes/CreditsScene';
 import { GameScene, type GameSnapshot } from '../scenes/GameScene';
 import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
 import type { TitleScene, TitleSnapshot } from '../scenes/TitleScene';
+import type { VictoryScene, VictorySnapshot } from '../scenes/VictoryScene';
 import { isMuted, soundLog } from '../scenes/sound';
 
 /**
@@ -35,6 +36,8 @@ export interface TestHook {
   pauseShowing(): boolean;
   /** The credits screen's text, while it is showing. */
   credits(): CreditsSnapshot | null;
+  /** The victory screen (M5.5), while it is showing. */
+  victory(): VictorySnapshot | null;
   /**
    * Sound (M4): muted or not, how many times each sound has started, which
    * sounds are loaded, and whether the music is playing (or waiting for the
@@ -118,6 +121,10 @@ export function installTestHook(game: Phaser.Game): void {
     crash: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
       s?.crashForTest();
+    },
+    victory: () => {
+      const s = game.scene.getScene('Victory') as VictoryScene | null;
+      return s && game.scene.isActive('Victory') ? s.snapshot() : null;
     },
     jetPass: () => {
       const s = game.scene.getScene('Game') as GameScene | null;

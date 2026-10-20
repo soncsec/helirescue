@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { afterResult, missionFromQuery, nextMission } from '../../src/logic/progress';
+import {
+  afterResult,
+  isVictory,
+  missionFromQuery,
+  nextMission,
+  startChoices,
+  stepChoice,
+} from '../../src/logic/progress';
 
 describe('nextMission', () => {
   it('moves on until the last mission', () => {
@@ -53,5 +60,42 @@ describe('missionFromQuery', () => {
     ]) {
       expect(missionFromQuery(q, 2)).toBeNull();
     }
+  });
+});
+
+describe('startChoices (M5.5)', () => {
+  it('offers mission 1 up to the furthest reached', () => {
+    expect(startChoices(1, 5)).toEqual([1]);
+    expect(startChoices(3, 5)).toEqual([1, 2, 3]);
+    expect(startChoices(5, 5)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('never offers a mission that does not exist', () => {
+    expect(startChoices(9, 5)).toEqual([1, 2, 3, 4, 5]);
+    expect(startChoices(0, 5)).toEqual([1]);
+    expect(startChoices(Number.NaN, 5)).toEqual([1]);
+  });
+});
+
+describe('stepChoice', () => {
+  const choices = [1, 2, 3];
+  it('moves one step and stops at either end', () => {
+    expect(stepChoice(2, 1, choices)).toBe(3);
+    expect(stepChoice(3, 1, choices)).toBe(3);
+    expect(stepChoice(2, -1, choices)).toBe(1);
+    expect(stepChoice(1, -1, choices)).toBe(1);
+  });
+
+  it('starts from the first choice if the current one is not offered', () => {
+    expect(stepChoice(9, 1, choices)).toBe(2);
+    expect(stepChoice(9, -1, [1])).toBe(1);
+  });
+});
+
+describe('isVictory', () => {
+  it('only a win on the last mission ends the game', () => {
+    expect(isVictory('complete', 5, 5)).toBe(true);
+    expect(isVictory('complete', 4, 5)).toBe(false);
+    expect(isVictory('gameover', 5, 5)).toBe(false);
   });
 });

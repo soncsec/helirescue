@@ -525,8 +525,12 @@ export const TITLE = {
   row: 14,
   keyX: 120,
   actionX: 290,
-  highY: 190,
-  startY: 208,
+  highY: 184,
+  /** The start mission picker (M5.5): "< MISSION 3: DOWNTOWN >", and its arrows' tap zones. */
+  missionY: 198,
+  arrowGap: 12,
+  arrowZone: 28,
+  startY: 214,
   /** The CREDITS prompt (keyboard) or button (touch) along the bottom. */
   creditY: 246,
   creditButtonWidth: 96,
@@ -537,9 +541,28 @@ export const TITLE = {
   blinkMs: 600,
   /** Dark panel behind the controls, high score and start prompt, so they read over the city. */
   panelTop: 82,
-  panelBottom: 222,
+  panelBottom: 228,
   panelWidth: 300,
   panelAlpha: 0.8,
+} as const;
+
+/**
+ * Victory screen (M5.5, src/scenes/VictoryScene.ts): the final score, then
+ * the credits scrolling up, in game pixels and seconds.
+ */
+export const VICTORY = {
+  /** Where the first line starts, and how long it holds before scrolling. */
+  top: 70,
+  holdSeconds: 3,
+  /** Scroll speed, px/s. */
+  speed: 24,
+  row: 12,
+  gap: 10,
+  titleSize: 16,
+  /** Dark wash over the backdrop so the text reads. */
+  shadeAlpha: 0.55,
+  /** The "press Enter" prompt, up from the bottom, once the credits have rolled. */
+  bottom: 18,
 } as const;
 
 /** Credits screen (src/scenes/CreditsScene.ts), in game pixels. */
