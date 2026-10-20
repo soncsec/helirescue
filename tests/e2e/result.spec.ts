@@ -98,7 +98,8 @@ test('a corrupt save is ignored and replaced, and the high score survives a relo
   expect(first).toMatchObject({ newHigh: true, highScore: first.result.score });
 
   await page.reload();
-  await openGame(page);
+  // Mission 2 is reached now, so the title would start there (M5.5): pick mission 1 again.
+  await openGame(page, '?mission=1');
   const second = await settle(page, 2, 14);
   expect(second.result.score).toBeLessThan(first.result.score);
   expect(second).toMatchObject({ newHigh: false, highScore: first.result.score });

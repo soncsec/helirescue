@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH, HUD, RESULT } from '../config/tuning';
 import type { MissionStart } from '../logic/progress';
 import type { MissionResult } from '../logic/score';
 import { play } from './sound';
+import type { VictoryData } from './VictoryScene';
 
 /** What the game scene hands the result screen. */
 export interface ResultData {
@@ -18,6 +19,8 @@ export interface ResultData {
   total: number;
   /** True when a win leads on to another mission. */
   next: boolean;
+  /** True when this win was the last mission: the victory screen comes next (M5.5). */
+  victory: boolean;
   /** The mission the button starts: the next one, or this one again (Retry). */
   then: MissionStart;
   highScore: number;
@@ -60,7 +63,7 @@ export class ResultScene extends Phaser.Scene {
 
     const over = kind === 'gameover';
     const title = over ? 'GAME OVER' : r.lost === 0 ? 'PERFECT RESCUE!' : 'MISSION COMPLETE';
-    const action = over ? 'RETRY' : next ? 'CONTINUE' : 'PLAY AGAIN';
+    const action = over ? 'RETRY' : next || this.data_.victory ? 'CONTINUE' : 'PLAY AGAIN';
     const high = newHigh ? `NEW! ${highScore}` : `${highScore}`;
     type Row = [string, string, (string | undefined)?];
     const middle: Row[] = over
@@ -129,6 +132,14 @@ export class ResultScene extends Phaser.Scene {
     this.leaving = true;
     play(this, 'sfx-select');
     this.scene.stop();
+    const { victory, total, highScore, newHigh, touch } = this.data_;
+    if (victory) {
+      const show: VictoryData = { score: total, highScore, newHigh, touch };
+      this.scene.stop('Game');
+      this.scene.stop('Hud');
+      this.scene.start('Victory', show);
+      return;
+    }
     this.scene.start('Game', this.data_.then);
   }
 

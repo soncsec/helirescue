@@ -139,7 +139,9 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
   - [x] Mission 3 "Downtown": 21 people, 4 guns, 6 soldiers, 2 tanks in two yards, a jet pass about every 30 s
   - [x] Mission 4 "Harbour": 24 people, 4 guns, 7 soldiers, 2 tanks, jets about every 28 s, 1 gunship
   - [x] Mission 5 "Mountain town": 25 people, 5 guns, 8 soldiers, 3 tanks, jets about every 24 s, 2 gunships
-- [ ] M5.5 Start from the furthest mission reached (H9); final victory screen with scrolling credits (owner, 2026-10-19)
+- [x] M5.5 Start from the furthest mission reached (H9); final victory screen with scrolling credits (owner, 2026-10-19)
+  - [x] The title offers every mission reached ("< MISSION 3: DOWNTOWN >"; Left and Right, or tap the arrows), starting at the furthest; a new game starts with no score
+  - [x] Winning mission 5 leads to the victory screen: MISSION ACCOMPLISHED, the final score and high score, then the full credits scroll up over the city (`src/scenes/VictoryScene.ts`); Enter, Esc or a tap goes back to the title
 
 **Acceptance criteria:** all 5 missions can be completed; difficulty limits enforced by tests; an e2e test loads each mission; the owner approves the difficulty curve.
 

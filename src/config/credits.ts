@@ -30,7 +30,7 @@ export const CREDITS: readonly CreditSection[] = [
     heading: 'ART',
     lines: [
       'Helicopter, buildings, base, weapons: drawn by Claude',
-      'City, people, soldier, tank, gunship, explosion:',
+      'Backdrops, people, soldier, tank, gunship, explosion:',
       '  Ansimuz Legacy Collection (CC0)',
       'VTOL jet: Reactorcore (CC0)',
       `${CC_BY_ART.use}: "${CC_BY_ART.title}"`,

@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { sheetSpec } from '../config/assets';
 import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
+import { missionFromQuery, startChoices, stepChoice } from '../logic/progress';
+import { missionAt, MISSIONS } from '../missions';
+import { onPress } from './keys';
 import { addBackdrop, loadArt, makeAnims } from './scenery';
 import { loadSave } from './storage';
 import { applySavedMute, ensureMusic, isMuted, loadSounds, play, toggleMute } from './sound';
@@ -11,14 +14,18 @@ export interface TitleSnapshot {
   lines: string[];
   touch: boolean;
   highScore: number;
+  /** The mission a new game starts from, and the ones on offer (M5.5). */
+  mission: number;
+  choices: number[];
 }
 
 const SIDE = sheetSpec('heli-side');
 
 /**
  * Title screen (roadmap M3.4): the name, what to do, the controls for this
- * device and the high score. Enter, Space or a tap starts mission 1; K or the
- * CREDITS button opens the credits (CreditsScene).
+ * device and the high score. Enter, Space or a tap starts a new game; Left and
+ * Right (or tapping the arrows) pick the mission to start from, up to the
+ * furthest reached (M5.5). K or the CREDITS button opens the credits.
  */
 export class TitleScene extends Phaser.Scene {
   private lines: string[] = [];
@@ -26,6 +33,9 @@ export class TitleScene extends Phaser.Scene {
   private highScore = 0;
   private leaving = false;
   private soundText: Phaser.GameObjects.Text | null = null;
+  private mission = 1;
+  private choices: number[] = [1];
+  private missionText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super('Title');
@@ -41,7 +51,12 @@ export class TitleScene extends Phaser.Scene {
     this.soundText = null;
     this.lines = [];
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches);
-    this.highScore = loadSave().highScore;
+    const save = loadSave();
+    this.highScore = save.highScore;
+    // Starts from the furthest mission reached; ?mission=N picks any mission for play-testing.
+    const asked = missionFromQuery(window.location.search, MISSIONS.length);
+    this.choices = startChoices(Math.max(save.furthestMission, asked ?? 1), MISSIONS.length);
+    this.mission = asked ?? this.choices[this.choices.length - 1] ?? 1;
     applySavedMute(this);
     // Loads in the background, then starts (or at the first key press or tap if the
     // browser is still locking sound).
@@ -95,6 +110,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.text(GAME_WIDTH / 2, TITLE.highY, `HIGH SCORE ${this.highScore}`, HUD.accent);
+    this.missionText = this.text(GAME_WIDTH / 2, TITLE.missionY, this.missionLabel());
     const start = this.text(
       GAME_WIDTH / 2,
       TITLE.startY,
@@ -146,25 +162,66 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', go);
     this.input.keyboard?.once('keydown-SPACE', go);
     this.input.keyboard?.once('keydown-K', credits);
-    this.input.keyboard?.on('keydown-M', () => this.toggleSound());
+    onPress(this.input.keyboard, ['M'], () => this.toggleSound());
+    onPress(this.input.keyboard, ['LEFT', 'A'], () => this.pick(-1));
+    onPress(this.input.keyboard, ['RIGHT', 'D'], () => this.pick(1));
     const on = (p: Phaser.Input.Pointer, x: number): boolean =>
       this.touch && Math.abs(p.x - x) <= bw / 2 && Math.abs(p.y - TITLE.creditY) <= bh / 2;
+    // The picker's arrows: either end of the mission line.
+    const arrow = (p: Phaser.Input.Pointer): -1 | 1 | 0 => {
+      const t = this.missionText;
+      if (!t || this.choices.length < 2 || Math.abs(p.y - (TITLE.missionY + 4)) > TITLE.row / 2) {
+        return 0;
+      }
+      if (Math.abs(p.x - (t.x - t.width / 2)) <= TITLE.arrowZone / 2) return -1;
+      if (Math.abs(p.x - (t.x + t.width / 2)) <= TITLE.arrowZone / 2) return 1;
+      return 0;
+    };
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
-      if (on(p, soundX)) this.toggleSound();
+      const dir = arrow(p);
+      if (dir !== 0) this.pick(dir);
+      else if (on(p, soundX)) this.toggleSound();
       else if (on(p, creditX)) credits();
       else go();
     });
   }
 
   snapshot(): TitleSnapshot {
-    return { lines: [...this.lines], touch: this.touch, highScore: this.highScore };
+    return {
+      lines: [...this.lines],
+      touch: this.touch,
+      highScore: this.highScore,
+      mission: this.mission,
+      choices: [...this.choices],
+    };
   }
 
   private start(): void {
     if (this.leaving) return;
     this.leaving = true;
     play(this, 'sfx-select');
-    this.scene.start('Game');
+    this.scene.start('Game', { mission: this.mission, startScore: 0 });
+  }
+
+  /** "< MISSION 3: DOWNTOWN >", with arrows only where there is somewhere to go. */
+  private missionLabel(): string {
+    const i = this.choices.indexOf(this.mission);
+    const left = i > 0 ? '< ' : '  ';
+    const right = i >= 0 && i < this.choices.length - 1 ? ' >' : '  ';
+    return `${left}MISSION ${this.mission}: ${missionAt(this.mission).name}${right}`;
+  }
+
+  /** Left or Right: the mission to start from, within those reached. */
+  private pick(dir: -1 | 1): void {
+    if (this.leaving) return;
+    const next = stepChoice(this.mission, dir, this.choices);
+    if (next === this.mission) return;
+    const before = this.missionLabel();
+    this.mission = next;
+    const label = this.missionLabel();
+    this.missionText?.setText(label);
+    this.lines = this.lines.map((l) => (l === before ? label : l));
+    play(this, 'sfx-select');
   }
 
   private soundLabel(): string {

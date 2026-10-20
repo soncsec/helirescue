@@ -8,6 +8,7 @@ import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
 import { CreditsScene } from './scenes/CreditsScene';
+import { VictoryScene } from './scenes/VictoryScene';
 import { MusicScene } from './scenes/MusicScene';
 import { PauseScene } from './scenes/PauseScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -47,6 +48,7 @@ export const game = new Phaser.Game({
           ResultScene,
           PauseScene,
           CreditsScene,
+          VictoryScene,
           MusicScene,
         ]
       : [
@@ -56,6 +58,7 @@ export const game = new Phaser.Game({
           ResultScene,
           PauseScene,
           CreditsScene,
+          VictoryScene,
           ArtScene,
           MusicScene,
         ],

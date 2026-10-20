@@ -97,22 +97,21 @@ test('Retry after a game over restarts the mission with the score it was entered
     .toEqual({ mission: 2, score: entered, saved: 0, lives: LIVES.perMission });
 });
 
-test('after the last mission, Enter starts again from mission 1', async ({ page }) => {
+test('after the last mission, the furthest is saved and Enter goes on to the victory screen', async ({
+  page,
+}) => {
   const last = MISSIONS.length;
   await openGame(page, `?mission=${last}`);
   const total = MISSIONS[last - 1]?.map.people.length ?? 0;
   const r = await settle(page, total, 0);
-  expect(r).toMatchObject({ kind: 'complete', mission: last, next: false });
-  expect(r.lines).toContain('PRESS ENTER TO PLAY AGAIN');
+  expect(r).toMatchObject({ kind: 'complete', mission: last, next: false, victory: true });
+  expect(r.lines).toContain('PRESS ENTER TO CONTINUE');
   const saved = JSON.parse(
     (await page.evaluate((k) => window.localStorage.getItem(k), KEY)) ?? '{}',
   ) as { furthestMission?: number };
   expect(saved.furthestMission).toBe(last);
   await page.keyboard.press('Enter');
   await expect
-    .poll(async () => {
-      const s = await page.evaluate(() => window.__game?.snapshot() ?? null);
-      return s && { mission: s.mission, score: s.hud.score };
-    }, MOVE)
-    .toEqual({ mission: 1, score: 0 });
+    .poll(() => page.evaluate(() => window.__game?.scene() ?? null), MOVE)
+    .toBe('Victory');
 });
