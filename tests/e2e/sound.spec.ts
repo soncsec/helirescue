@@ -57,6 +57,24 @@ test('playing makes the matching sounds: the gun, a bomb, and landing', async ({
     .toBe(1);
 });
 
+test('controls work straight away, even while the music is still loading', async ({ page }) => {
+  test.slow();
+  // Hold the music back so it is still loading when the game starts.
+  await page.route('**/assets/audio/music.*', async (route) => {
+    await new Promise((r) => setTimeout(r, 6000));
+    await route.continue();
+  });
+  await openGame(page);
+  expect((await sound(page))?.loaded).not.toContain('music');
+  await page.keyboard.down('ArrowUp');
+  await expect
+    .poll(() => page.evaluate(() => window.__game?.snapshot()?.player.y ?? 999), WAIT)
+    .toBeLessThan(100);
+  await page.keyboard.up('ArrowUp');
+  // And the music arrives and plays afterwards.
+  await expect.poll(async () => (await sound(page))?.loaded, WAIT).toContain('music');
+});
+
 test('M turns sound off and on, and the choice is remembered', async ({ page }) => {
   test.slow();
   await openTitle(page);

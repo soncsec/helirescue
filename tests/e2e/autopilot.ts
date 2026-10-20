@@ -32,6 +32,8 @@ export interface Leg {
   untilGunDown?: number;
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
+  /** hold: stop once the helicopter's own fire has hit a person (friendly fire). */
+  untilPeopleHit?: boolean;
   /** move or hold: stop once the helicopter has taken this many flak hits. */
   untilHits?: number;
   /**
@@ -152,7 +154,9 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (leg.kind === 'slide') return s.mode === 'landed' || s.mode === 'crashed';
           if (leg.kind === 'hold') {
             const gunDown = s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false;
-            const hit = leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits;
+            const hit =
+              (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) ||
+              (leg.untilPeopleHit === true && s.weapons.peopleHit > 0);
             return (
               gunDown || hit || (leg.forMs !== undefined && performance.now() - began >= leg.forMs)
             );

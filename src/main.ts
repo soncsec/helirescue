@@ -8,6 +8,7 @@ import { ArtScene } from './scenes/ArtScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
 import { CreditsScene } from './scenes/CreditsScene';
+import { MusicScene } from './scenes/MusicScene';
 import { PauseScene } from './scenes/PauseScene';
 import { TitleScene } from './scenes/TitleScene';
 import { ResultScene } from './scenes/ResultScene';
@@ -38,8 +39,26 @@ export const game = new Phaser.Game({
   // ?scene=art opens the art viewer; otherwise the title screen. Phaser starts the first scene listed.
   scene:
     startScene(window.location.search) === 'Art'
-      ? [ArtScene, TitleScene, GameScene, HudScene, ResultScene, PauseScene, CreditsScene]
-      : [TitleScene, GameScene, HudScene, ResultScene, PauseScene, CreditsScene, ArtScene],
+      ? [
+          ArtScene,
+          TitleScene,
+          GameScene,
+          HudScene,
+          ResultScene,
+          PauseScene,
+          CreditsScene,
+          MusicScene,
+        ]
+      : [
+          TitleScene,
+          GameScene,
+          HudScene,
+          ResultScene,
+          PauseScene,
+          CreditsScene,
+          ArtScene,
+          MusicScene,
+        ],
 });
 
 // Landscape only on touch devices: in portrait, pause and ask for a turn.
