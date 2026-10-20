@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, HUD, PAUSE, RESULT } from '../config/tuning';
+import { onPress } from './keys';
 import { isMuted, play, toggleMute } from './sound';
 
 /** What the game scene hands the pause screen. */
@@ -52,7 +53,7 @@ export class PauseScene extends Phaser.Scene {
     const resume = (): void => this.resume();
     const kb = this.input.keyboard;
     for (const key of ['P', 'ESC', 'ENTER', 'SPACE']) kb?.once(`keydown-${key}`, resume);
-    kb?.on('keydown-M', () => this.toggleSound());
+    onPress(kb, ['M'], () => this.toggleSound());
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       const onSound =
         this.touch &&

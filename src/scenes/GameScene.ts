@@ -132,6 +132,7 @@ import {
 import type { HudState } from './HudScene';
 import type { ResultData } from './ResultScene';
 import { loadSave, storeSave } from './storage';
+import { onPress } from './keys';
 import { loadSounds, play, toggleMute } from './sound';
 import { SOUNDS } from '../config/audio';
 
@@ -433,18 +434,17 @@ export class GameScene extends Phaser.Scene {
       space: 'SPACE',
     }) as Keys;
     this.bombPressed = false;
-    kb.on('keydown-X', () => {
+    onPress(kb, ['X'], () => {
       this.bombPressed = true;
     });
     // A press is recorded as it happens: a quick tap can come and go between
     // frames, which Phaser's JustDown would miss.
     this.turnPressed = false;
-    kb.on('keydown-C', () => {
+    onPress(kb, ['C'], () => {
       this.turnPressed = true;
     });
-    kb.on('keydown-P', () => this.pauseGame());
-    kb.on('keydown-ESC', () => this.pauseGame());
-    kb.on('keydown-M', () => toggleMute(this));
+    onPress(kb, ['P', 'ESC'], () => this.pauseGame());
+    onPress(kb, ['M'], () => toggleMute(this));
 
     // Pause when the tab or app loses focus (owner, 2026-10-18), so nothing
     // happens to the helicopter while the player is away.

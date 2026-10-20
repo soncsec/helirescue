@@ -4,6 +4,7 @@ import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
 import { missionFromQuery, startChoices, stepChoice } from '../logic/progress';
 import { missionAt, MISSIONS } from '../missions';
+import { onPress } from './keys';
 import { addBackdrop, loadArt, makeAnims } from './scenery';
 import { loadSave } from './storage';
 import { applySavedMute, ensureMusic, isMuted, loadSounds, play, toggleMute } from './sound';
@@ -161,9 +162,9 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', go);
     this.input.keyboard?.once('keydown-SPACE', go);
     this.input.keyboard?.once('keydown-K', credits);
-    this.input.keyboard?.on('keydown-M', () => this.toggleSound());
-    for (const key of ['LEFT', 'A']) this.input.keyboard?.on(`keydown-${key}`, () => this.pick(-1));
-    for (const key of ['RIGHT', 'D']) this.input.keyboard?.on(`keydown-${key}`, () => this.pick(1));
+    onPress(this.input.keyboard, ['M'], () => this.toggleSound());
+    onPress(this.input.keyboard, ['LEFT', 'A'], () => this.pick(-1));
+    onPress(this.input.keyboard, ['RIGHT', 'D'], () => this.pick(1));
     const on = (p: Phaser.Input.Pointer, x: number): boolean =>
       this.touch && Math.abs(p.x - x) <= bw / 2 && Math.abs(p.y - TITLE.creditY) <= bh / 2;
     // The picker's arrows: either end of the mission line.
