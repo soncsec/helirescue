@@ -15,6 +15,7 @@
  */
 import type { EnemyTuning } from './enemies';
 import type { SoldierTuning } from './soldiers';
+import type { JetTuning } from './jets';
 import type { TankTuning } from './tanks';
 
 export interface DifficultyCurve {
@@ -35,18 +36,26 @@ export const DIFFICULTY_LIMITS = {
   rangeAtLast: 1.2,
 } as const;
 
-export interface Foes<E extends EnemyTuning, S extends SoldierTuning, K extends TankTuning> {
+export interface Foes<
+  E extends EnemyTuning,
+  S extends SoldierTuning,
+  K extends TankTuning,
+  J extends JetTuning,
+> {
   enemies: E;
   soldiers: S;
   tanks: K;
+  /** Jet passes come as often as the map says; their shots get faster. */
+  jets: J;
 }
 
 /** The enemy numbers for `mission` (1 to the last mission). */
-export function difficulty<E extends EnemyTuning, S extends SoldierTuning, K extends TankTuning>(
-  mission: number,
-  base: Foes<E, S, K>,
-  curve: DifficultyCurve,
-): Foes<E, S, K> {
+export function difficulty<
+  E extends EnemyTuning,
+  S extends SoldierTuning,
+  K extends TankTuning,
+  J extends JetTuning,
+>(mission: number, base: Foes<E, S, K, J>, curve: DifficultyCurve): Foes<E, S, K, J> {
   if (!Number.isInteger(mission) || mission < 1 || mission > curve.lastMission) {
     throw new RangeError(`mission must be a whole number from 1 to ${curve.lastMission}`);
   }
@@ -81,5 +90,6 @@ export function difficulty<E extends EnemyTuning, S extends SoldierTuning, K ext
       shellSpeed: k.shellSpeed * speed,
       range: k.range * range,
     },
+    jets: { ...base.jets, shotSpeed: base.jets.shotSpeed * speed },
   };
 }

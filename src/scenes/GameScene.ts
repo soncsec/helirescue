@@ -18,6 +18,7 @@ import {
   ENEMIES,
   SOLDIERS,
   TANKS,
+  JETS,
   WEAPONS,
   PEOPLE,
   PLAYER,
@@ -62,6 +63,15 @@ import {
   type Enemies,
 } from '../logic/enemies';
 import { afterCrash } from '../logic/lives';
+import {
+  hitJet,
+  jetBox,
+  newSky,
+  updateJets,
+  type JetEvent,
+  type Sky,
+  type Warning,
+} from '../logic/jets';
 import {
   hitTank,
   newArmour,
@@ -131,6 +141,8 @@ export interface GameSnapshot {
     | 'gun-destroyed'
     | 'soldier-down'
     | 'tank-destroyed'
+    | 'jet-in'
+    | 'jet-down'
   )[];
   people: { id: number; mode: Person['mode']; x: number; y: number }[];
   hud: HudState;
@@ -173,6 +185,11 @@ export interface GameSnapshot {
       engaged: boolean;
     }[];
     tankShells: number;
+    /** Jets flying now (M5.3), their shots, the warning showing, and seconds to the next pass. */
+    jets: { x: number; y: number; alive: boolean; hp: number; facing: 1 | -1 }[];
+    jetShots: number;
+    jetWarning: Warning | null;
+    nextPass: number;
   };
   /** Touch controls on, the D-pad's current axis, and the canvas zoom. */
   input: { touch: boolean; touchAxis: Axis; zoom: number };
@@ -255,7 +272,14 @@ export class GameScene extends Phaser.Scene {
   /** The mission and the score brought into it (M5.1). */
   private start: MissionStart = { mission: 1, startScore: 0 };
   /** This mission's enemy numbers, from difficulty(). */
-  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS, typeof TANKS>;
+  private foe!: Foes<typeof ENEMIES, typeof SOLDIERS, typeof TANKS, typeof JETS>;
+  /** Enemy jets and their shots (pooled), with their sprites and the warning marker. */
+  private sky!: Sky;
+  private jetSprites: Phaser.GameObjects.Sprite[] = [];
+  private jetShotSprites: Phaser.GameObjects.Sprite[] = [];
+  private jetWarning!: Phaser.GameObjects.Text;
+  /** Lowest a jet pass may fly: clear of the tallest roof. */
+  private jetFloorY = 0;
   /** Tanks and their shells (pooled), with their sprites. */
   private armour!: Armour;
   private tankSprites: Phaser.GameObjects.Sprite[] = [];
@@ -276,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     this.map = missionAt(mission).map;
     this.foe = difficulty(
       mission,
-      { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS },
+      { enemies: ENEMIES, soldiers: SOLDIERS, tanks: TANKS, jets: JETS },
       DIFFICULTY,
     );
   }
@@ -345,6 +369,7 @@ export class GameScene extends Phaser.Scene {
     this.makeEnemies();
     this.makeSquad();
     this.makeTanks();
+    this.makeJets();
     this.startRotor();
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
@@ -448,6 +473,19 @@ export class GameScene extends Phaser.Scene {
     for (const e of fire) this.onEnemyEvent(e);
     const armour = updateTanks(this.armour, this.heli, dt, this.arena(), this.foe.tanks, this.rng);
     for (const e of armour) this.onTankEvent(e);
+    const left = this.cameras.main.scrollX;
+    const view = { left, right: left + GAME_WIDTH, bottomY: this.jetFloorY };
+    const sky = updateJets(
+      this.sky,
+      this.heli,
+      dt,
+      this.arena(),
+      view,
+      this.map.jets,
+      this.foe.jets,
+      this.rng,
+    );
+    for (const e of sky) this.onJetEvent(e);
     const out = this.people.filter(exposed).map((p) => ({
       id: p.id,
       x: p.x,
@@ -526,6 +564,16 @@ export class GameScene extends Phaser.Scene {
           engaged: k.engaged,
         })),
         tankShells: this.armour.shells.filter((s) => s.alive).length,
+        jets: this.sky.jets.map((j) => ({
+          x: j.x,
+          y: j.y,
+          alive: j.alive,
+          hp: j.hp,
+          facing: j.facing,
+        })),
+        jetShots: this.sky.shots.filter((s) => s.alive).length,
+        jetWarning: this.sky.warning ? { ...this.sky.warning } : null,
+        nextPass: this.sky.nextPass,
       },
       input: {
         touch: this.touch !== null,
@@ -799,11 +847,12 @@ export class GameScene extends Phaser.Scene {
       buildings: this.roofs,
       groundY: this.world.groundY,
       width: this.map.width,
-      // Guns, then soldiers, then tanks, then people: a hit's target index says which.
+      // Guns, soldiers, tanks, jets, then people: a hit's target index says which.
       targets: [
         ...this.enemies.guns.map((g) => gunBox(g, this.foe.enemies)),
         ...this.squad.soldiers.map((s) => soldierBox(s, this.foe.soldiers)),
         ...this.armour.tanks.map((k) => tankBox(k, this.foe.tanks)),
+        ...this.sky.jets.map((j) => jetBox(j, this.foe.jets)),
         // Our own fire hits people too (owner, 2026-10-19).
         ...this.people.map((p) => personBox(p, PEOPLE)),
       ],
@@ -917,6 +966,64 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
   }
 
+  /** The jet pool, its shot pool, their sprites and the warning marker (M5.3). */
+  private makeJets(): void {
+    this.sky = newSky(this.map.jets, this.foe.jets);
+    const tallest = Math.min(...this.roofs.map((r) => r.y));
+    this.jetFloorY = tallest - JETS.roofClearance;
+    this.jetSprites = this.sky.jets.map(() =>
+      this.add.sprite(0, 0, 'vtol-jet').setVisible(false).setDepth(1),
+    );
+    this.jetShotSprites = this.sky.shots.map(() =>
+      this.add.sprite(0, 0, 'bullet').setTint(JETS.shotTint).setVisible(false).setDepth(2),
+    );
+    this.jetWarning = this.add
+      .text(0, 0, '!', {
+        fontFamily: HUD.font,
+        fontSize: `${JETS.warnSize}px`,
+        color: JETS.warnColour,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(3)
+      .setShadow(1, 1, HUD.shadow, 0, false, true)
+      .setVisible(false);
+  }
+
+  /**
+   * Test hook only (e2e build): brings the next jet pass forward to now, so
+   * jets can be tested without waiting for the mission's first pass. Not
+   * reachable in the player build.
+   */
+  jetPassForTest(): void {
+    if (this.map.jets) this.sky.nextPass = Math.min(this.sky.nextPass, JETS.warnSeconds);
+  }
+
+  private onJetEvent(e: JetEvent): void {
+    if (e.kind === 'heli-hit' || e.kind === 'burst') {
+      this.onEnemyEvent(e);
+      return;
+    }
+    if (e.kind === 'jet-warning') {
+      play(this, 'sfx-select');
+      return;
+    }
+    if (e.kind === 'jet-fired') {
+      play(this, 'sfx-soldier-shot');
+      return;
+    }
+    if (e.kind === 'jet-in') {
+      this.log('jet-in');
+      return;
+    }
+    // Shot down: an explosion in the air.
+    this.log('jet-down');
+    play(this, 'sfx-blast');
+    const fx = this.blasts[this.nextBlast++ % this.blasts.length];
+    fx?.setPosition(e.x, e.y).setOrigin(0.5).setVisible(true).play({ key: 'explosion', repeat: 0 });
+    this.cameras.main.shake(EFFECTS.blastShakeMs, EFFECTS.blastShake);
+  }
+
   /** Someone hit by the helicopter's own bullet or bomb: lost, like a soldier's hit. */
   private friendlyFire(id: number): void {
     const { people, event } = shootPerson(this.people, id, visible);
@@ -1019,6 +1126,27 @@ export class GameScene extends Phaser.Scene {
       sprite?.setVisible(s.alive);
       if (s.alive) sprite?.setPosition(s.x, s.y);
     });
+    this.sky.jets.forEach((j, i) => {
+      const sprite = this.jetSprites[i];
+      sprite?.setVisible(j.alive);
+      if (j.alive) sprite?.setPosition(j.x, j.y).setFlipX(j.facing < 0);
+    });
+    this.sky.shots.forEach((s, i) => {
+      const sprite = this.jetShotSprites[i];
+      sprite?.setVisible(s.alive);
+      if (s.alive) sprite?.setPosition(s.x, s.y).setFlipX(s.vx < 0);
+    });
+    // The warning blinks at the edge the jet will come from, at its height.
+    const w = this.sky.warning;
+    const blink = Math.floor(this.time.now / JETS.warnBlinkMs) % 2 === 0;
+    this.jetWarning.setVisible(w !== null && blink);
+    if (w) {
+      const x =
+        w.side === -1
+          ? JETS.warnInset + JETS.warnSize / 2
+          : GAME_WIDTH - JETS.warnInset - JETS.warnSize / 2;
+      this.jetWarning.setPosition(x, w.y);
+    }
     this.enemies.flak.forEach((s, i) => {
       const sprite = this.flakSprites[i];
       sprite?.setVisible(s.alive);
@@ -1043,6 +1171,7 @@ export class GameScene extends Phaser.Scene {
         const guns = this.enemies.guns.length;
         const soldiers = guns + this.squad.soldiers.length;
         const tanks = soldiers + this.armour.tanks.length;
+        const jets = tanks + this.sky.jets.length;
         if (e.target < guns) {
           const destroyed = hitGun(this.enemies, e.target, 1);
           if (destroyed) this.onEnemyEvent(destroyed);
@@ -1052,8 +1181,11 @@ export class GameScene extends Phaser.Scene {
         } else if (e.target < tanks) {
           const destroyed = hitTank(this.armour, e.target - soldiers, 1);
           if (destroyed) this.onTankEvent(destroyed);
+        } else if (e.target < jets) {
+          const down = hitJet(this.sky, e.target - tanks, 1);
+          if (down) this.onJetEvent(down);
         } else {
-          const p = this.people[e.target - tanks];
+          const p = this.people[e.target - jets];
           if (p) this.friendlyFire(p.id);
         }
       }

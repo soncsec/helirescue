@@ -228,6 +228,49 @@ export const TANKS = {
   shellTint: 0xffa040,
 } as const;
 
+/**
+ * Enemy VTOL jets (roadmap M5.3, src/logic/jets.ts), from mission 2: fast
+ * strafing passes, easy to dodge. A warning shows at the screen edge 1.5 s
+ * before each pass, at the height the jet will fly; a burst of 3 shots takes
+ * 24 health at most; 2 bullets bring a jet down. The sprite is 141x43, facing
+ * right, nose 70 px ahead of the centre. First values, to tune after the
+ * owner's play-test.
+ */
+export const JETS = {
+  speed: 240,
+  hp: 2,
+  halfWidth: 60,
+  halfHeight: 12,
+  noseX: 70,
+  noseY: 6,
+  shotSpeed: 420,
+  shotLife: 1.2,
+  shotDamage: 8,
+  maxShots: 6,
+  maxJets: 2,
+  burst: 3,
+  burstGap: 0.12,
+  fireRange: 260,
+  fireHeight: 14,
+  warnSeconds: 1.5,
+  offscreen: 90,
+  topY: 30,
+  /** Passes fly at least this far above the tallest roof (centre y), px. */
+  roofClearance: 28,
+  heightJitter: 10,
+  everyJitter: 0.2,
+  heliHalfWidth: ENEMIES.heliHalfWidth,
+  heliHalfHeight: ENEMIES.heliHalfHeight,
+  hitStep: 4,
+  /** Shots reuse the bullet sprite, tinted yellow. */
+  shotTint: 0xffe066,
+  /** The warning: a red "!" at the screen edge, blinking. */
+  warnColour: '#e0503a',
+  warnSize: 16,
+  warnInset: 6,
+  warnBlinkMs: 150,
+} as const;
+
 /** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
 export const EFFECTS = {
   sparks: 8,
@@ -376,6 +419,8 @@ export const WORLD_LIMITS = {
   personHalfWidth: PEOPLE.halfWidth,
   /** A tank's drawn half width: its patrol keeps this clear of buildings. */
   tankHalfWidth: TANKS.spriteHalfWidth,
+  /** Jet passes are a surprise now and then, never a stream (M5.3). */
+  jetGap: 15,
 } as const;
 
 /** Camera follow (H1). */

@@ -9,7 +9,8 @@ const g = (x: number, count: number): { x: number }[] => group(x, count, PEOPLE.
  * district, with six groups, 19 people in all, so a full rescue takes at
  * least two trips. More guns and soldiers than mission 1, and difficulty()
  * makes them fire a little more often. A tank patrols the open factory yard
- * in the middle, guarding the roofs either side (the VTOL jet joins in M5.3).
+ * in the middle, guarding the roofs either side, and a VTOL jet makes a
+ * strafing pass about every half minute.
  * As in mission 1, each group stands at the far end of its helipad roof,
  * leaving room to land beside it, and the guns stand on tall roofs with
  * nobody on them. Building x is in pixels; width and height are in 16-pixel
@@ -47,6 +48,8 @@ export const MISSION_2: WorldMap = {
   ],
   // One tank in the yard (M5.2).
   tanks: [{ x: 990, patrol: 50 }],
+  // A VTOL jet pass about every half minute (M5.3).
+  jets: { first: 30, every: 35 },
   // Each group's last person stands 8 px in from the roof's right edge.
   people: [...g(442, 3), ...g(776, 4), ...g(1272, 3), ...g(1628, 3), ...g(1962, 3), ...g(2328, 3)],
 };

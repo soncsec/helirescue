@@ -32,6 +32,8 @@ export interface WorldMap {
    * in an open stretch with no buildings.
    */
   tanks?: readonly { x: number; patrol: number }[];
+  /** Enemy jet passes (M5.3): seconds before the first, and between passes. */
+  jets?: { first: number; every: number };
 }
 
 /** Where a soldier stands and walks: on a roof, or on the street in a gap between buildings. */
@@ -61,6 +63,8 @@ export interface WorldLimits {
   personHalfWidth: number;
   /** A tank's drawn half width: its patrol keeps this clear of buildings. */
   tankHalfWidth: number;
+  /** Fewest seconds before the first jet pass and between passes. */
+  jetGap: number;
 }
 
 /** A flat roof surface: where the helicopter can land and people wait. */
@@ -183,6 +187,9 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
       problems.push(`soldier ${i} walks into a building`);
     }
   });
+  if (world.jets && !(world.jets.first >= limits.jetGap && world.jets.every >= limits.jetGap)) {
+    problems.push(`jet passes come less than ${limits.jetGap} s apart`);
+  }
   (world.tanks ?? []).forEach((k, i) => {
     const lo = k.x - k.patrol - limits.tankHalfWidth;
     const hi = k.x + k.patrol + limits.tankHalfWidth;

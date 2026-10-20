@@ -27,6 +27,8 @@ export interface TestHook {
   settle(saved: number, lost: number): void;
   /** Crashes the helicopter where it is (a real crash: uses up a helicopter). */
   crash(): void;
+  /** Brings the next enemy jet pass forward to now (missions with jets, M5.3). */
+  jetPass(): void;
   /** The title screen's text, while it is showing. */
   title(): TitleSnapshot | null;
   /** True while the pause screen is showing. */
@@ -116,6 +118,10 @@ export function installTestHook(game: Phaser.Game): void {
     crash: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
       s?.crashForTest();
+    },
+    jetPass: () => {
+      const s = game.scene.getScene('Game') as GameScene | null;
+      s?.jetPassForTest();
     },
     settle: (saved, lost) => {
       const s = game.scene.getScene('Game') as GameScene | null;

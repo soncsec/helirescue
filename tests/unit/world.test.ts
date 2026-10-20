@@ -22,6 +22,7 @@ const limits = {
   landingRoom: 60,
   personHalfWidth: 6,
   tankHalfWidth: 50,
+  jetGap: 15,
 };
 const b = (x: number, width = 4, height = 3): WorldMap['buildings'][number] => ({
   x,
@@ -222,6 +223,21 @@ describe('tanks on the map (M5.2)', () => {
   });
 });
 
+describe('jets on the map (M5.3)', () => {
+  it('come now and then, never in a stream', () => {
+    expect(worldProblems(map({ jets: { first: 20, every: 30 } }), limits)).toEqual([]);
+    for (const jets of [
+      { first: 5, every: 30 },
+      { first: 20, every: 10 },
+      { first: Number.NaN, every: 30 },
+    ]) {
+      expect(worldProblems(map({ jets }), limits)).toEqual([
+        'jet passes come less than 15 s apart',
+      ]);
+    }
+  });
+});
+
 describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({ n, map: m }) => {
   it('follows the world rules', () => {
     expect(worldProblems(m, WORLD_LIMITS)).toEqual([]);
@@ -258,6 +274,10 @@ describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({
 
   it('has tanks from mission 2 (M5.2)', () => {
     expect((m.tanks?.length ?? 0) > 0).toBe(n >= 2);
+  });
+
+  it('has jet passes from mission 2 (M5.3)', () => {
+    expect(m.jets !== undefined).toBe(n >= 2);
   });
 
   it('has at least as many people and enemies as the mission before', () => {

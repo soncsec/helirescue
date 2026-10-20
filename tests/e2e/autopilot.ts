@@ -32,6 +32,8 @@ export interface Leg {
   untilGunDown?: number;
   /** hold: stop once this tank is destroyed (M5.2). */
   untilTankDown?: number;
+  /** hold: stop once a jet has been shot down (M5.3). */
+  untilJetDown?: boolean;
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
   /** hold: stop once the helicopter's own fire has hit a person (friendly fire). */
@@ -157,7 +159,8 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (leg.kind === 'hold') {
             const gunDown =
               s.enemies.guns[leg.untilGunDown ?? -1]?.alive === false ||
-              s.enemies.tanks[leg.untilTankDown ?? -1]?.alive === false;
+              s.enemies.tanks[leg.untilTankDown ?? -1]?.alive === false ||
+              (leg.untilJetDown === true && s.events.includes('jet-down'));
             const hit =
               (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) ||
               (leg.untilPeopleHit === true && s.weapons.peopleHit > 0);
