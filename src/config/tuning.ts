@@ -191,6 +191,43 @@ export const SOLDIERS = {
   shotTint: 0xff6a5a,
 } as const;
 
+/**
+ * Tanks (roadmap M5.2, src/logic/tanks.ts), from mission 2. First values, to
+ * tune after the owner's play-test: a shell hits harder than flak (5 hits
+ * crash the helicopter), and a bomb or 4 bullets destroy a tank. The tank
+ * sprite is 128x64, facing right, with its treads on the bottom row, the hull
+ * 106 px wide and the barrel tip 45 px ahead of the centre, 33 px up.
+ */
+export const TANKS = {
+  speed: 16,
+  range: 220,
+  reloadMin: 2.6,
+  reloadMax: 3.6,
+  firstShot: 1.5,
+  hp: 4,
+  /** Hit box: most of the hull and turret. */
+  halfWidth: 46,
+  height: 40,
+  /** Drawn width either side of the centre: maps keep this clear of buildings. */
+  spriteHalfWidth: 53,
+  muzzleX: 45,
+  muzzleY: 33,
+  minElevation: -10,
+  maxElevation: 60,
+  shellSpeed: 130,
+  shellLife: 2.2,
+  shellDamage: 20,
+  maxShells: 6,
+  turnSeconds: 0.8,
+  heliHalfWidth: ENEMIES.heliHalfWidth,
+  heliHalfHeight: ENEMIES.heliHalfHeight,
+  hitStep: 4,
+  /** A bomb destroys a tank whose hit box is within this distance of the blast. */
+  blastRadius: 24,
+  /** Shells reuse the flak sprite, tinted orange. */
+  shellTint: 0xffa040,
+} as const;
+
 /** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
 export const EFFECTS = {
   sparks: 8,
@@ -337,6 +374,8 @@ export const WORLD_LIMITS = {
   landingRoom: 2 * Math.max(HELI_SHAPE.skidBack, HELI_SHAPE.skidFront) + 32,
   /** How much of the roof one person takes up either side of their x. */
   personHalfWidth: PEOPLE.halfWidth,
+  /** A tank's drawn half width: its patrol keeps this clear of buildings. */
+  tankHalfWidth: TANKS.spriteHalfWidth,
 } as const;
 
 /** Camera follow (H1). */

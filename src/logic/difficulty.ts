@@ -5,7 +5,7 @@
  * numbers (which the owner play-tested and approved), so the limits are
  * checked in one place:
  * - mission 1 is exactly the base numbers;
- * - guns and soldiers fire more often each mission, by the same percentage
+ * - guns, soldiers and tanks fire more often each mission, by the same percentage
  *   each time, reaching at most twice mission 1's rate at the last mission;
  * - their shots get faster, at most 30% faster by the last mission;
  * - they open fire from further away, at most 20% further by the last mission;
@@ -15,6 +15,7 @@
  */
 import type { EnemyTuning } from './enemies';
 import type { SoldierTuning } from './soldiers';
+import type { TankTuning } from './tanks';
 
 export interface DifficultyCurve {
   /** The last mission (5). */
@@ -34,17 +35,18 @@ export const DIFFICULTY_LIMITS = {
   rangeAtLast: 1.2,
 } as const;
 
-export interface Foes<E extends EnemyTuning, S extends SoldierTuning> {
+export interface Foes<E extends EnemyTuning, S extends SoldierTuning, K extends TankTuning> {
   enemies: E;
   soldiers: S;
+  tanks: K;
 }
 
 /** The enemy numbers for `mission` (1 to the last mission). */
-export function difficulty<E extends EnemyTuning, S extends SoldierTuning>(
+export function difficulty<E extends EnemyTuning, S extends SoldierTuning, K extends TankTuning>(
   mission: number,
-  base: Foes<E, S>,
+  base: Foes<E, S, K>,
   curve: DifficultyCurve,
-): Foes<E, S> {
+): Foes<E, S, K> {
   if (!Number.isInteger(mission) || mission < 1 || mission > curve.lastMission) {
     throw new RangeError(`mission must be a whole number from 1 to ${curve.lastMission}`);
   }
@@ -56,6 +58,7 @@ export function difficulty<E extends EnemyTuning, S extends SoldierTuning>(
   const range = 1 + (curve.rangeAtLast - 1) * p;
   const e = base.enemies;
   const s = base.soldiers;
+  const k = base.tanks;
   return {
     enemies: {
       ...e,
@@ -70,6 +73,13 @@ export function difficulty<E extends EnemyTuning, S extends SoldierTuning>(
       reloadMax: s.reloadMax / rate,
       shotSpeed: s.shotSpeed * speed,
       range: s.range * range,
+    },
+    tanks: {
+      ...k,
+      reloadMin: k.reloadMin / rate,
+      reloadMax: k.reloadMax / rate,
+      shellSpeed: k.shellSpeed * speed,
+      range: k.range * range,
     },
   };
 }

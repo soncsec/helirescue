@@ -27,6 +27,11 @@ export interface WorldMap {
    * below (without people) or, between buildings, on the street.
    */
   soldiers?: readonly { x: number; patrol: number }[];
+  /**
+   * Tanks (M5.2): they drive `patrol` px either side of x along the street,
+   * in an open stretch with no buildings.
+   */
+  tanks?: readonly { x: number; patrol: number }[];
 }
 
 /** Where a soldier stands and walks: on a roof, or on the street in a gap between buildings. */
@@ -54,6 +59,8 @@ export interface WorldLimits {
   landingRoom: number;
   /** Roof taken up by one person either side of their x. */
   personHalfWidth: number;
+  /** A tank's drawn half width: its patrol keeps this clear of buildings. */
+  tankHalfWidth: number;
 }
 
 /** A flat roof surface: where the helicopter can land and people wait. */
@@ -174,6 +181,14 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
       }
     } else if (lo < 0 || hi > world.width || solid.some((r) => hi > r.left && lo < r.right)) {
       problems.push(`soldier ${i} walks into a building`);
+    }
+  });
+  (world.tanks ?? []).forEach((k, i) => {
+    const lo = k.x - k.patrol - limits.tankHalfWidth;
+    const hi = k.x + k.patrol + limits.tankHalfWidth;
+    if (!(k.patrol >= 0)) problems.push(`tank ${i} has a negative patrol`);
+    else if (lo < 0 || hi > world.width || solid.some((r) => hi > r.left && lo < r.right)) {
+      problems.push(`tank ${i} drives into a building`);
     }
   });
   world.buildings.forEach((b, i) => {

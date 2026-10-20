@@ -21,6 +21,7 @@ const limits = {
   personMargin: 8,
   landingRoom: 60,
   personHalfWidth: 6,
+  tankHalfWidth: 50,
 };
 const b = (x: number, width = 4, height = 3): WorldMap['buildings'][number] => ({
   x,
@@ -203,6 +204,24 @@ describe('soldiers on the map', () => {
   });
 });
 
+describe('tanks on the map (M5.2)', () => {
+  // Buildings at 200..328 and 400..528; open street from 528 to the end (960).
+  const at = (tanks: { x: number; patrol: number }[]): WorldMap =>
+    map({ buildings: [b(200, 8), b(400, 8)], tanks });
+  it('patrol an open stretch of street, clear of buildings and the world edge', () => {
+    expect(worldProblems(at([{ x: 700, patrol: 50 }]), limits)).toEqual([]);
+    expect(worldProblems(at([{ x: 600, patrol: 30 }]), limits)).toEqual([
+      'tank 0 drives into a building',
+    ]);
+    expect(worldProblems(at([{ x: 880, patrol: 40 }]), limits)).toEqual([
+      'tank 0 drives into a building',
+    ]);
+    expect(worldProblems(at([{ x: 700, patrol: -1 }]), limits)).toEqual([
+      'tank 0 has a negative patrol',
+    ]);
+  });
+});
+
 describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({ n, map: m }) => {
   it('follows the world rules', () => {
     expect(worldProblems(m, WORLD_LIMITS)).toEqual([]);
@@ -237,12 +256,17 @@ describe.each(MISSIONS.map((m, i) => ({ n: i + 1, ...m })))('mission $n map', ({
     expect(first?.height).toBeGreaterThanOrEqual(4);
   });
 
+  it('has tanks from mission 2 (M5.2)', () => {
+    expect((m.tanks?.length ?? 0) > 0).toBe(n >= 2);
+  });
+
   it('has at least as many people and enemies as the mission before', () => {
     const before = MISSIONS[n - 2]?.map;
     if (!before) return;
     expect(m.people.length).toBeGreaterThanOrEqual(before.people.length);
     expect(m.aaGuns?.length ?? 0).toBeGreaterThanOrEqual(before.aaGuns?.length ?? 0);
     expect(m.soldiers?.length ?? 0).toBeGreaterThanOrEqual(before.soldiers?.length ?? 0);
+    expect(m.tanks?.length ?? 0).toBeGreaterThanOrEqual(before.tanks?.length ?? 0);
   });
 });
 
