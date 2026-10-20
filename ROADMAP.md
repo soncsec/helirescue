@@ -151,7 +151,7 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
 
 - [ ] M6.1 Balance pass from the owner's play-test notes (2026-10-20)
   - [x] The helicopter faces the way it flies; the gun fires along the tilted body; flying into a building costs a little health
-  - [ ] Tank shells pass in front of buildings, like the soldiers' shots
+  - [x] Tank shells pass in front of buildings, like the soldiers' shots
   - [ ] A mission needs 70% of its people saved to count as complete
   - [x] Bombs ("grenades"): the owner hadn't found them, so the pause screen now lists every control and mission 1 starts with an "X: DROP A BOMB   P: CONTROLS" hint
 - [ ] M6.2 Refresh the portal card image (256×192 gameplay shot) for v1.0, by portal PR (the card went `live` in M2.5)
