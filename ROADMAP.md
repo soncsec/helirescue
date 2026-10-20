@@ -127,7 +127,7 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
 - [x] M5.1 Mission data format and `difficulty()` with tested limits (H4); mission 2 (industrial backdrop, today's enemy types) and moving on to the next mission after a win
   - [x] `src/missions/` lists each mission's name and map; mission 2 "Factory District": 5 screens, 19 people, 3 guns, 5 soldiers
   - [x] `difficulty()` (`src/logic/difficulty.ts`): mission 1 unchanged; by mission 5 up to 2× the fire rate, shots 30% faster, range 20% further; damage and hit points never change
-  - [x] A win continues to the next mission with the score carried over; Retry keeps the score the mission was entered with; the furthest mission is saved (H9); a banner names the mission as it starts; `?mission=N` starts a mission directly for play-testing
+  - [x] A win continues to the next mission with the score carried over; Retry keeps the score the mission was entered with; the furthest mission is saved (H9); a banner names the mission as it starts; `?mission=N` starts any mission directly (kept open in v1.0, owner 2026-10-20)
 - [x] M5.2 Tanks from mission 2: they drive along the street and fire shells up at the helicopter when it is low or landed; a bomb or 4 bullets destroys one
   - [x] `src/logic/tanks.ts`: tanks patrol open street, stop and turn to face a helicopter in range, and fire shells (pooled) within the barrel's reach (10° below level to 60° above); a shell takes 20 health; the difficulty curve covers tanks too
   - [x] Mission 2 gets an open factory yard with one tank (map check: a tank's patrol stays clear of buildings); mission 1 is unchanged
