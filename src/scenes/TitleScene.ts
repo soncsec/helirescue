@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { sheetSpec } from '../config/assets';
+import { KEY_CONTROLS, TOUCH_CONTROLS } from '../config/controls';
 import { GAME_WIDTH, HUD, RESULT, SCENERY, TITLE } from '../config/tuning';
 import { wantsTouch } from '../logic/device';
 import { missionFromQuery, startChoices, stepChoice } from '../logic/progress';
@@ -85,22 +86,9 @@ export class TitleScene extends Phaser.Scene {
     this.text(GAME_WIDTH / 2, TITLE.taglineY, 'LAND ON THE ROOFTOPS.');
     this.text(GAME_WIDTH / 2, TITLE.taglineY + TITLE.row, 'BRING EVERYONE HOME.');
 
-    const controls: [string, string][] = this.touch
-      ? [
-          ['D-PAD', 'FLY'],
-          ['FIRE', 'SHOOT (HOLD)'],
-          ['BOMB', 'DROP A BOMB'],
-          ['TURN', 'TURN AROUND'],
-          ['II', 'PAUSE'],
-        ]
-      : [
-          ['ARROWS / WASD', 'FLY'],
-          ['Z / SPACE', 'SHOOT (HOLD)'],
-          ['X', 'DROP A BOMB'],
-          ['C', 'TURN AROUND'],
-          ['P / ESC', 'PAUSE'],
-          ['M', this.soundLabel()],
-        ];
+    const controls: (readonly [string, string])[] = this.touch
+      ? [...TOUCH_CONTROLS]
+      : [...KEY_CONTROLS, ['M', this.soundLabel()]];
     controls.forEach(([key, action], i) => {
       const y = TITLE.controlsY + i * TITLE.row;
       this.text(TITLE.keyX, y, key, HUD.colour, HUD.fontSize, 0);

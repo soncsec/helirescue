@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import type { ArtScene, ArtSnapshot } from '../scenes/ArtScene';
 import type { CreditsScene, CreditsSnapshot } from '../scenes/CreditsScene';
 import { GameScene, type GameSnapshot } from '../scenes/GameScene';
+import type { PauseScene, PauseSnapshot } from '../scenes/PauseScene';
 import type { ResultScene, ResultSnapshot } from '../scenes/ResultScene';
 import type { TitleScene, TitleSnapshot } from '../scenes/TitleScene';
 import type { VictoryScene, VictorySnapshot } from '../scenes/VictoryScene';
@@ -34,6 +35,8 @@ export interface TestHook {
   title(): TitleSnapshot | null;
   /** True while the pause screen is showing. */
   pauseShowing(): boolean;
+  /** The pause screen's text (with the controls), while it is showing. */
+  pause(): PauseSnapshot | null;
   /** The credits screen's text, while it is showing. */
   credits(): CreditsSnapshot | null;
   /** The victory screen (M5.5), while it is showing. */
@@ -101,6 +104,10 @@ export function installTestHook(game: Phaser.Game): void {
       return s && game.scene.isActive('Title') ? s.snapshot() : null;
     },
     pauseShowing: () => game.scene.isActive('Pause'),
+    pause: () => {
+      const s = game.scene.getScene('Pause') as PauseScene | null;
+      return s && game.scene.isActive('Pause') ? s.snapshot() : null;
+    },
     sound: () => {
       const music = game.sound.get('music');
       return {

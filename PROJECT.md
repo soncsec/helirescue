@@ -71,6 +71,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-20 | `?mission=N` stays open in v1.0: any mission can be started from the address, so skipping ahead is allowed. The difficulty limits are recorded in ARCHITECTURE.md H4 |
 | 2026-10-20 | Owner's play-test of missions 1–5: the helicopter faces the way it flies (Turn still works while hovering); the gun fires along the tilted body; flying into a building costs a little health (H2, H3 amended) |
 | 2026-10-20 | Owner's play-test: tank shells pass in front of buildings, like the soldiers' shots (H5 amended) |
+| 2026-10-20 | Controls help (owner's play-test: bombs were easy to miss): the pause screen lists every control, and mission 1 starts with a hint for the bomb and the pause screen. The Turn key stays |
 
 ## 6. Open questions
 

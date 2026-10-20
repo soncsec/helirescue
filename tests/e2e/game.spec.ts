@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fly } from './autopilot';
 import { openGame, openTitle } from './helpers';
-import { FLIGHT, HELI_SHAPE, LANDING, TOUCH } from '../../src/config/tuning';
+import { FLIGHT, HELI_SHAPE, LANDING, SCENERY, TOUCH } from '../../src/config/tuning';
 import { bumpDamage } from '../../src/logic/landing';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
@@ -282,9 +282,13 @@ test('a phone held upright is asked to turn, and the game pauses', async ({
 test('it faces the way it flies; while hovering C turns it, once per press', async ({ page }) => {
   test.slow();
   await openGame(page);
-  await page.keyboard.down('ArrowUp');
-  await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(CLEAR_Y);
-  await page.keyboard.up('ArrowUp');
+  // Out from the base at cruise height (the autopilot holds it there): the base
+  // is only ~40 px from the world's left edge, too close to speed up flying left.
+  const floorY = SCENERY.groundY - HELI_SHAPE.bottom;
+  await fly(page, { kind: 'climb', x: 96, floorY, controls: 'keys' });
+  await fly(page, { kind: 'move', x: 400, floorY, controls: 'keys' });
+  // Flying right faced it right.
+  expect((await snapshot(page)).facing).toBe(1);
   // Flying left turns it left once it is faster than turnSpeed (owner, 2026-10-20).
   await page.keyboard.down('ArrowLeft');
   await expect
@@ -292,14 +296,15 @@ test('it faces the way it flies; while hovering C turns it, once per press', asy
     .toBeLessThan(-FLIGHT.turnSpeed);
   await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
   await page.keyboard.up('ArrowLeft');
-  // Hovering again: one press of C, one turn.
-  await expect.poll(async () => Math.abs((await snapshot(page)).velocity.x), MOVE).toBeLessThan(5);
+  // Hovering again (held at cruise height): one press of C, one turn.
+  await fly(page, { kind: 'move', x: 300, floorY, controls: 'keys' });
+  const f = (await snapshot(page)).facing;
   await page.keyboard.press('c');
-  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(1);
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-f);
   await page.waitForTimeout(300);
-  expect((await snapshot(page)).facing).toBe(1);
+  expect((await snapshot(page)).facing).toBe(-f);
   await page.keyboard.press('c');
-  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(f);
 });
 
 test('the touch Turn button turns the helicopter around', async ({ browser, browserName }) => {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { KEY_CONTROLS, TOUCH_CONTROLS } from '../../src/config/controls';
 import { GAME_WIDTH, TOUCH } from '../../src/config/tuning';
 import { openGame } from './helpers';
 
@@ -24,6 +25,30 @@ async function expectRunning(page: Page): Promise<void> {
   await expect.poll(() => showing(page)).toBe(false);
   await expect.poll(() => player(page)).not.toBeNull();
 }
+
+test('the pause screen lists the controls, bombs included (owner, 2026-10-20)', async ({
+  page,
+}) => {
+  await openGame(page);
+  await page.keyboard.press('p');
+  await expectFrozen(page);
+  const lines = (await page.evaluate(() => window.__game?.pause() ?? null))?.lines ?? [];
+  for (const [key, action] of KEY_CONTROLS) expect(lines).toContain(`${key} ${action}`);
+  expect(lines).toContain('X DROP A BOMB');
+  expect(lines).toContain('PRESS P TO RESUME');
+});
+
+test('mission 1 starts with a bomb and controls hint under the banner; mission 2 does not', async ({
+  page,
+}) => {
+  await openGame(page);
+  const banner = async (): Promise<string[]> =>
+    (await page.evaluate(() => window.__game?.snapshot() ?? null))?.bannerLines ?? [];
+  expect(await banner()).toContain('X: DROP A BOMB   P: CONTROLS');
+  await openGame(page, '?mission=2');
+  await expect.poll(banner).toContain('MISSION 2');
+  expect((await banner()).some((l) => l.includes('BOMB'))).toBe(false);
+});
 
 test('P pauses and resumes; the helicopter does not move while paused', async ({ page }) => {
   await openGame(page);
@@ -84,6 +109,10 @@ test('on a phone the pause button pauses and a tap resumes', async ({ browser, b
   await page.mouse.click(box.x + TOUCH.pauseX * zoom, box.y + TOUCH.pauseY * zoom);
   await expectFrozen(page);
   expect(await page.evaluate(() => window.__game?.scene() ?? null)).not.toBe('Game');
+  // The touch controls are listed, with the BOMB button (owner, 2026-10-20).
+  const lines = (await page.evaluate(() => window.__game?.pause() ?? null))?.lines ?? [];
+  for (const [key, action] of TOUCH_CONTROLS) expect(lines).toContain(`${key} ${action}`);
+  expect(lines).toContain('TAP TO RESUME');
   await page.locator('#game canvas').tap();
   await expectRunning(page);
   await context.close();
