@@ -5,7 +5,8 @@ import type { ResultSnapshot } from '../../src/scenes/ResultScene';
 
 /**
  * Roadmap M3.2: the mission ends when everyone is saved or lost, the result
- * screen shows the score with the bonus, the high score is kept in the one
+ * screen shows the score with the bonus; a mission needs 70% of its people
+ * saved, or it fails (owner, 2026-10-20); the high score is kept in the one
  * localStorage key (H9), and a win goes on to the next mission (M5.1). The test hook
  * settles the outcome so these checks don't need every trip flown (the full
  * flight loop is covered by rescue.spec.ts).
@@ -69,17 +70,45 @@ test('losing people scales the bonus down and keeps a higher stored high score',
     }
   }, KEY);
   await openGame(page);
-  const r = await settle(page, 8, 8);
+  // 12 of 16 is the fewest that completes mission 1 (70%, rounded up).
+  const r = await settle(page, 12, 4);
   expect(r.result).toMatchObject({
-    saved: 8,
-    lost: 8,
-    bonus: SCORING.missionBonus / 2,
+    saved: 12,
+    lost: 4,
+    bonus: (SCORING.missionBonus * 3) / 4,
     perfect: 0,
-    score: 8 * SCORING.perPerson + SCORING.missionBonus / 2,
+    score: 12 * SCORING.perPerson + (SCORING.missionBonus * 3) / 4,
   });
   expect(r).toMatchObject({ highScore: 5000, newHigh: false });
   expect(r.lines).toContain('MISSION COMPLETE');
   expect(JSON.parse((await stored(page)) ?? '').highScore).toBe(5000);
+});
+
+test('too few saved fails the mission: Retry plays it again, and nothing moves on', async ({
+  page,
+}) => {
+  await openGame(page);
+  const needed = Math.ceil(TOTAL * SCORING.neededShare);
+  expect(needed).toBe(12);
+  expect((await page.evaluate(() => window.__game?.snapshot() ?? null))?.hud.needed).toBe(needed);
+  // One too many lost: 11 is the most that could still be saved.
+  const r = await settle(page, needed - 1, TOTAL - needed + 1);
+  expect(r).toMatchObject({ kind: 'failed', needed, next: false, victory: false });
+  expect(r.result).toMatchObject({ bonus: 0, perfect: 0, score: (needed - 1) * SCORING.perPerson });
+  expect(r.lines).toContain('MISSION FAILED');
+  expect(r.lines).toContain(`SAVE AT LEAST ${needed}`);
+  expect(r.lines).toContain('PRESS ENTER TO RETRY');
+  // Mission 2 is not reached.
+  expect(JSON.parse((await stored(page)) ?? '').furthestMission).toBe(1);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.__game?.result() ?? null)).toBeNull();
+  // The mission restarts: everyone waiting again.
+  await expect
+    .poll(async () => (await page.evaluate(() => window.__game?.snapshot() ?? null))?.hud.saved)
+    .toBe(0);
+  const s = await page.evaluate(() => window.__game?.snapshot() ?? null);
+  expect(s).toMatchObject({ mission: 1, startScore: 0 });
+  expect(s?.hud.needed).toBe(needed);
 });
 
 test('a corrupt save is ignored and replaced, and the high score survives a reload', async ({
@@ -94,7 +123,7 @@ test('a corrupt save is ignored and replaced, and the high score survives a relo
     }
   }, KEY);
   await openGame(page);
-  const first = await settle(page, 4, 12);
+  const first = await settle(page, 12, 4);
   expect(first).toMatchObject({ newHigh: true, highScore: first.result.score });
 
   await page.reload();
@@ -107,7 +136,7 @@ test('a corrupt save is ignored and replaced, and the high score survives a relo
 
 test('Enter after a win starts mission 2, carrying the score over', async ({ page }) => {
   await openGame(page);
-  const r = await settle(page, 10, 6);
+  const r = await settle(page, 12, 4);
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__game?.result() ?? null)).toBeNull();
   await expect

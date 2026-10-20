@@ -37,6 +37,9 @@ test('a busy stretch of mission 1 keeps each update well inside a 60 fps frame',
   await openGame(page);
   const floorY = 254 - HELI_SHAPE.bottom;
   await fly(page, { kind: 'climb', x: 96, floorY, controls: 'keys' });
+  // Bombs and bullets may hit people on the roofs (friendly fire): keep the
+  // mission going, so the 70% rule doesn't end it mid-measurement.
+  await page.evaluate(() => window.__game?.keepOpen());
   await page.evaluate(() => window.__game?.resetUpdateTimes());
 
   // Cross the city high up with the gun firing, bombing as we go.

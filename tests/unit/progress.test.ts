@@ -31,6 +31,13 @@ describe('afterResult', () => {
     });
   });
 
+  it('Retry after a failed mission (too few saved) also restarts it with the entry score', () => {
+    expect(afterResult('failed', { mission: 2, startScore: 2700 }, 3500, 5)).toEqual({
+      mission: 2,
+      startScore: 2700,
+    });
+  });
+
   it('after the last mission, starts again from mission 1 with no score', () => {
     expect(afterResult('complete', { mission: 2, startScore: 2700 }, 5000, 2)).toEqual({
       mission: 1,
@@ -97,5 +104,6 @@ describe('isVictory', () => {
     expect(isVictory('complete', 5, 5)).toBe(true);
     expect(isVictory('complete', 4, 5)).toBe(false);
     expect(isVictory('gameover', 5, 5)).toBe(false);
+    expect(isVictory('failed', 5, 5)).toBe(false);
   });
 });

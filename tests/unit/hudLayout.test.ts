@@ -14,6 +14,12 @@ describe('HUD text row', () => {
     expect(aboard).toBeLessThan(HUD.scoreRight - width('SCORE 9999999'));
     expect(HUD.scoreRight).toBeLessThanOrEqual(GAME_WIDTH);
   });
+
+  it('fits NEED under SAVED, clear of the helicopters left (70% rule)', () => {
+    expect(HUD.livesX + width('HELI x9')).toBeLessThan(HUD.savedX);
+    expect(HUD.neededY).toBeGreaterThanOrEqual(HUD.textY + HUD.fontSize);
+    expect(HUD.savedX + width('NEED 99')).toBeLessThan(HUD.aboardX);
+  });
 });
 
 describe('result panel (M5.1)', () => {

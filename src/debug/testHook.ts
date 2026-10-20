@@ -29,6 +29,8 @@ export interface TestHook {
   settle(saved: number, lost: number): void;
   /** Crashes the helicopter where it is (a real crash: uses up a helicopter). */
   crash(): void;
+  /** Keeps the mission going whoever is saved or lost (the frame-budget test). */
+  keepOpen(): void;
   /** Brings the next enemy jet pass forward to now (missions with jets, M5.3). */
   jetPass(): void;
   /** The title screen's text, while it is showing. */
@@ -124,6 +126,10 @@ export function installTestHook(game: Phaser.Game): void {
     updateTimes: () => [...updateTimes],
     resetUpdateTimes: () => {
       updateTimes.length = 0;
+    },
+    keepOpen: () => {
+      const s = game.scene.getScene('Game') as GameScene | null;
+      s?.keepOpenForTest();
     },
     crash: () => {
       const s = game.scene.getScene('Game') as GameScene | null;
