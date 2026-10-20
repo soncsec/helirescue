@@ -87,6 +87,7 @@ tools/docs-page/       builds the docs page from the four docs
 
 - **Decision:** simple rules per enemy type (patrol, aim, fire with a cooldown) with clear targets: soldiers aim at running people, anti-aircraft guns at the helicopter. All randomness uses the seeded RNG.
 - **Alternatives:** a behaviour-tree library (a new dependency; more than four enemy types need).
+- **Amended 2026-10-20 (owner's play-test):** tank shells pass in front of buildings, like the soldiers' shots, and burst only on the street or at the end of their life, so a building between a tank and the helicopter does not stop them. Roof guns, jets and gunships are unchanged: they fire from above, where buildings rarely block them.
 
 ### H6: Claude-made art — *Accepted 2026-10-18*
 

@@ -160,11 +160,37 @@ describe('tanks', () => {
     expect(elevation(k, t, back.x - 100, back.y - 100)).toBeCloseTo(45);
   });
 
-  it('shells burst on buildings and the street, and the pool never grows', () => {
+  it("shells pass in front of buildings, like the soldiers' shots (owner, 2026-10-20)", () => {
+    // A tall building between the tank's muzzle and the helicopter: the
+    // shell's path crosses its wall below the roof, and still hits.
+    const wall: Arena = {
+      ...arena,
+      buildings: [...arena.buildings, { left: 680, right: 720, y: 200, base: false }],
+    };
     const a = newArmour([post], t);
-    // Behind the building's wall: shells burst on it.
-    const events = run(a, heli(780, 120), 8);
-    expect(events.filter((e) => e.kind === 'tank-fired').length).toBeGreaterThan(1);
+    const rng = createRng(1);
+    const events: TankEvent[] = [];
+    for (let i = 0; i < 6 * 60; i++) {
+      events.push(...updateTanks(a, heli(760, 170), 1 / 60, wall, t, rng));
+    }
+    expect(events.some((e) => e.kind === 'tank-fired')).toBe(true);
+    expect(events.some((e) => e.kind === 'heli-hit')).toBe(true);
+  });
+
+  it('shells that miss burst at the end of their life, and the pool never grows', () => {
+    const a = newArmour([post], t);
+    // Fire at a low helicopter, which leaves at once: the shell flies on and bursts.
+    const rng = createRng(1);
+    let fired = false;
+    for (let i = 0; i < 5 * 60 && !fired; i++) {
+      fired = updateTanks(a, heli(780, 120), 1 / 60, arena, t, rng).some(
+        (e) => e.kind === 'tank-fired',
+      );
+    }
+    expect(fired).toBe(true);
+    const later = run(a, away, t.shellLife + 0.5);
+    expect(later.some((e) => e.kind === 'burst')).toBe(true);
+    expect(a.shells.every((x) => !x.alive)).toBe(true);
     expect(a.shells).toHaveLength(t.maxShells);
   });
 

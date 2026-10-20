@@ -3,7 +3,9 @@
  * shells up at the helicopter when it comes low and close. The barrel is
  * fixed, so a tank first stops and turns to face the helicopter, then fires
  * only within its barrel's reach (from just below level up to a steep angle):
- * flying high above it, or far away, is safe. Shells live in a fixed pool,
+ * flying high above it, or far away, is safe. Shells pass in front of
+ * buildings, like the soldiers' shots, and burst only on the street (owner's
+ * play-test, 2026-10-20), so hiding behind a building does not stop them. Shells live in a fixed pool,
  * reused, never grown. Firing times use the seeded RNG. A bomb or a few
  * bullets destroy a tank. Plain TypeScript, unit tested.
  */
@@ -135,8 +137,10 @@ export function updateTanks(
   rng: Rng,
 ): TankEvent[] {
   const events: TankEvent[] = [];
+  // Shells fly in front of the buildings: only the street stops them.
+  const open: Arena = { ...arena, buildings: [] };
   for (const s of a.shells) {
-    const e = moveShell(s, h, dt, arena, t, t.shellLife, t.shellDamage);
+    const e = moveShell(s, h, dt, open, t, t.shellLife, t.shellDamage);
     if (e?.kind === 'heli-hit' || e?.kind === 'burst') events.push(e);
   }
 
