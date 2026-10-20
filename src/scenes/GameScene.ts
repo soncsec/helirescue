@@ -836,8 +836,10 @@ export class GameScene extends Phaser.Scene {
     else if (event.kind === 'hard-landing') play(this, 'sfx-hard-land');
     else if (event.kind === 'crashed') play(this, 'sfx-crash');
     else if (event.kind === 'hit') play(this, 'sfx-heli-hit');
+    const hurtBump = event.kind === 'bumped' && event.damage > 0;
+    if (hurtBump) play(this, 'sfx-heli-hit');
     const { flight: f } = this.heli;
-    if (event.kind === 'hard-landing') {
+    if (event.kind === 'hard-landing' || hurtBump) {
       this.cameras.main.shake(LANDING_FX.shakeMs, LANDING_FX.shakeStrength);
     } else if (event.kind === 'crashed') {
       const { left, gameOver } = afterCrash(this.lives);
