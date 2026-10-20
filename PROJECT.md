@@ -67,6 +67,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-19 | Credits: a CREDITS screen from the title (K, or a touch button) with the full CC-BY attribution, and scrolling credits at the end of the game (M5.5); the title no longer carries the credit line |
 | 2026-10-19 | M3.7 frame-rate check: an automated frame-time budget test (our per-frame work in a busy scene), plus the owner's play-test on real devices |
 | 2026-10-20 | M5 plan: mission 2 becomes playable first (mission format, `difficulty()`, moving on to the next mission), then tanks, aircraft, missions 3–5 and the victory screen. Backdrops for missions 3–5 come from the same CC0 Ansimuz pack ("Urban landscape" and "Ocean View" day and night), shown to the owner side by side first. The VTOL jet appears from mission 2 and the gunship from mission 4. Tanks appear from mission 2 and fire up at the helicopter when it is low or landed; mission 1 stays as play-tested |
+| 2026-10-20 | Backdrops for missions 3–5, picked from an in-game preview: 3 Downtown (Warped "Urban landscape", by day), 4 Harbour (Warped "Ocean View", day), 5 Mountain town (Gothicvania "night town", same CC0 Ansimuz collection), instead of Ocean View day and night for 4 and 5, so all five missions look different |
 
 ## 6. Open questions
 

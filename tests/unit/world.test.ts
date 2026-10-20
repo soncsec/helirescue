@@ -297,8 +297,10 @@ describe('missions', () => {
     expect(MISSION_1.theme).toBe('night');
   });
 
-  it('mission 2 is in the factory district', () => {
-    expect(missionAt(2).map.theme).toBe('war');
+  it('each mission has its own look (M5.4)', () => {
+    expect(MISSIONS.map((m) => m.map.theme)).toEqual(
+      ['night', 'war', 'downtown', 'harbour', 'mountain'].slice(0, MISSIONS.length),
+    );
   });
 
   it('has no more missions than the saved data and the difficulty curve allow', () => {

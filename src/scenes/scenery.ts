@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IMAGES, SHEETS, TILE } from '../config/assets';
+import { IMAGES, SHEETS, THEMES, TILE } from '../config/assets';
 import { GAME_HEIGHT, GAME_WIDTH, SCENERY } from '../config/tuning';
 import { layoutBuilding } from '../logic/buildingLayout';
 import type { Rng } from '../logic/rng';
@@ -45,18 +45,16 @@ export function missingArt(scene: Phaser.Scene): string[] {
     .filter((k) => !scene.textures.exists(k) || scene.textures.get(k).key === '__MISSING');
 }
 
-/** Sky colour plus three background layers, fixed to the screen. Move them with scrollBackdrop. */
+/** Sky colour plus the theme's background layers, fixed to the screen. Move them with scrollBackdrop. */
 export function addBackdrop(scene: Phaser.Scene, theme: Theme): ParallaxLayer[] {
   scene.cameras.main.setBackgroundColor(S.skyColour[theme]);
-  const prefix = theme === 'night' ? 'city' : 'industrial';
-  return (['sky', 'far', 'near'] as const).map((part) => {
-    const key = `${prefix}-${part}`;
+  return THEMES[theme].layers.map(({ key, factor }) => {
     const tex = scene.textures.get(key).getSourceImage();
     const sprite = scene.add
       .tileSprite(0, S.groundY, GAME_WIDTH, tex.height, key)
       .setOrigin(0, 1)
       .setScrollFactor(0);
-    return { sprite, factor: S.parallax[part] };
+    return { sprite, factor };
   });
 }
 
@@ -81,7 +79,7 @@ export function addBuilding(
   rng: Rng,
   base = false,
 ): Roof {
-  const tiles = `buildings-${theme}`;
+  const { tiles } = THEMES[theme];
   const roof = roofOf(b, S, base);
   layoutBuilding(b, rng).forEach((row, y) =>
     row.forEach((name, x) => {

@@ -4,7 +4,11 @@
  */
 import type { BuildingOptions } from './buildingLayout';
 
-export type Theme = 'night' | 'war';
+/**
+ * A mission's look (M5.4): its backdrop, building tiles and street colours
+ * (src/config/assets.ts THEMES, src/config/tuning.ts SCENERY).
+ */
+export type Theme = 'night' | 'war' | 'downtown' | 'harbour' | 'mountain';
 
 /** A building on the map. `x` is its left edge in pixels; size is in tiles. */
 export interface PlacedBuilding extends BuildingOptions {

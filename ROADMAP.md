@@ -134,7 +134,11 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
 - [ ] M5.3 Enemy aircraft: the VTOL jet from mission 2 (fast strafing passes), the gunship from mission 4 (hovers and fires bursts)
   - [x] VTOL jet (`src/logic/jets.ts`): passes timed by the map (mission 2: first after 30 s, then about every 35 s); a blinking "!" at the screen edge 1.5 s before, at the jet's height; it crosses above the rooftops and fires a level burst of 3 (8 health each) at a helicopter ahead and level with it; 2 bullets bring it down
   - [ ] Gunship, built with missions 3–5 (M5.4) so it is tested in mission 4
-- [ ] M5.4 Missions 3–5: layouts, plus backdrops from the CC0 pack (3 Urban landscape, 4 Ocean View day, 5 Ocean View night), shown to the owner side by side before they are added
+- [ ] M5.4 Missions 3–5: layouts, plus backdrops from the CC0 pack, shown to the owner side by side before they are added
+  - [x] Backdrops picked from an in-game preview (owner, 2026-10-20): 3 Downtown (Urban landscape), 4 Harbour (Ocean View day), 5 Mountain town (Gothicvania night town); each mission theme lists its layers and tiles (`THEMES` in `src/config/assets.ts`)
+  - [x] Mission 3 "Downtown": 21 people, 4 guns, 6 soldiers, 2 tanks in two yards, a jet pass about every 30 s
+  - [ ] Gunship (from mission 4) and mission 4 "Harbour"
+  - [ ] Mission 5 "Mountain town"
 - [ ] M5.5 Start from the furthest mission reached (H9); final victory screen with scrolling credits (owner, 2026-10-19)
 
 **Acceptance criteria:** all 5 missions can be completed; difficulty limits enforced by tests; an e2e test loads each mission; the owner approves the difficulty curve.

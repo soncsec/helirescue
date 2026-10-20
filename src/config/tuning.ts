@@ -390,12 +390,28 @@ export const SCENERY = {
   /** Top of the street. */
   groundY: 254,
   tile: 16,
-  /** Parallax: how fast each background layer moves relative to the camera. */
-  parallax: { sky: 0.1, far: 0.3, near: 0.6 },
   /** Fill above the background art, matched to its top row. */
-  skyColour: { night: 0x281d51, war: 0x19281f },
-  streetColour: { night: 0x1a1226, war: 0x26221f },
-  streetEdgeColour: { night: 0x3d2a52, war: 0x55504c },
+  skyColour: {
+    night: 0x281d51,
+    war: 0x19281f,
+    downtown: 0xb6d3e1,
+    harbour: 0x000050,
+    mountain: 0x040c0c,
+  },
+  streetColour: {
+    night: 0x1a1226,
+    war: 0x26221f,
+    downtown: 0x3a4250,
+    harbour: 0x1e2433,
+    mountain: 0x121a1a,
+  },
+  streetEdgeColour: {
+    night: 0x3d2a52,
+    war: 0x55504c,
+    downtown: 0x6a7686,
+    harbour: 0x45506a,
+    mountain: 0x2e4040,
+  },
 } as const;
 
 /** Rules every mission map must follow (checked by a unit test). */
