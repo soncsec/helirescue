@@ -69,6 +69,17 @@ tools/docs-page/       builds the docs page from the four docs
 - **Decision:** each mission is a data object in `src/missions/`: buildings (position, width, height), people per roof, enemy roster, spawn timeline. Buildings are assembled from tiles at runtime. One `difficulty(mission)` function produces every difficulty number, and tests enforce its limits (same pattern as Star Destroyer ADR-012).
 - **Alternatives:** Tiled maps, as Contro uses (needs an install; suits complex maps); one hand-coded scene per mission.
 - **Tradeoffs:** a small data format to design (M5); missions are then reviewable data and cheap to add.
+- **Difficulty limits (owner, 2026-10-20):** `difficulty()` (`src/logic/difficulty.ts`) works every mission's enemy numbers out from mission 1's, which the owner play-tested. The curve is `DIFFICULTY` in `src/config/tuning.ts`; unit tests fail if it goes past `DIFFICULTY_LIMITS`:
+
+  | Number | Mission 1 | Each mission | Limit at mission 5 |
+  |---|---|---|---|
+  | Fire rate (guns, soldiers, tanks, gunships) | base | same percentage step | at most 2× |
+  | Shot speed (all enemies, jets included) | base | same amount step | at most 1.3× |
+  | Firing range (guns, soldiers, tanks, gunships) | base | same amount step | at most 1.2× |
+  | Damage per hit, hit points, grace before the first shot | base | never change | — |
+
+  How many enemies a mission has, and how often jets come, is part of its map, which the world checks keep fair (for example, jet passes at least 15 s apart).
+- **Mission select (owner, 2026-10-20):** `?mission=N` in the address starts any mission, also in v1.0. Skipping ahead is allowed; nothing is stored or sent beyond the furthest mission (H9).
 
 ### H5: Enemy behaviour — *Accepted 2026-10-18*
 
