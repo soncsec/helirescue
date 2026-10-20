@@ -54,6 +54,8 @@ test('the title offers every mission reached, starting at the furthest', async (
   await page.keyboard.press('ArrowRight');
   await expect.poll(async () => (await title(page))?.mission).toBe(3);
   await page.keyboard.press('ArrowLeft');
+  // Let the picker take the press before starting (Enter could otherwise win the race).
+  await expect.poll(async () => (await title(page))?.mission).toBe(2);
   await page.keyboard.press('Enter');
   await expect.poll(() => scene(page), WAIT).toBe('Game');
   const s = await page.evaluate(() => window.__game?.snapshot() ?? null);
