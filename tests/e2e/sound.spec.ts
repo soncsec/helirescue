@@ -57,25 +57,50 @@ test('playing makes the matching sounds: the gun, a bomb, and landing', async ({
     .toBe(1);
 });
 
-test('M turns sound off and on, and the choice is remembered', async ({ page }) => {
+test('controls work straight away, even while the music is still loading', async ({ page }) => {
   test.slow();
-  await openTitle(page);
-  await page.keyboard.press('m');
-  await expect.poll(async () => (await sound(page))?.muted, WAIT).toBe(true);
-  expect((await page.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(
+  // Hold the music back so it is still loading when the game starts.
+  await page.route('**/assets/audio/music.*', async (route) => {
+    await new Promise((r) => setTimeout(r, 6000));
+    await route.continue();
+  });
+  await openGame(page);
+  expect((await sound(page))?.loaded).not.toContain('music');
+  await page.keyboard.down('ArrowUp');
+  await expect
+    .poll(() => page.evaluate(() => window.__game?.snapshot()?.player.y ?? 999), WAIT)
+    .toBeLessThan(100);
+  await page.keyboard.up('ArrowUp');
+  // And the music arrives and plays afterwards.
+  await expect.poll(async () => (await sound(page))?.loaded, WAIT).toContain('music');
+});
+
+test('M turns sound off and on, and the choice is remembered', async ({ page: first, context }) => {
+  test.slow();
+  await openTitle(first);
+  await first.keyboard.press('m');
+  await expect.poll(async () => (await sound(first))?.muted, WAIT).toBe(true);
+  expect((await first.evaluate(() => window.__game?.title() ?? null))?.lines).toContain(
     'M SOUND: OFF',
   );
   expect(
-    await page.evaluate(() => JSON.parse(localStorage.getItem('helirescue') ?? '{}').muted),
+    await first.evaluate(() => JSON.parse(localStorage.getItem('helirescue') ?? '{}').muted),
   ).toBe(true);
-  await page.reload();
+  // Come back later: a new page in the same browser, with the same saved data.
+  await first.close();
+  const page = await context.newPage();
+  // Make sure keys go to this page (closing the first one can leave focus behind).
+  await page.bringToFront();
   await openTitle(page);
   expect((await sound(page))?.muted).toBe(true);
   // Muted, firing plays nothing.
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__game?.scene() ?? null)).toBe('Game');
+  // In the air first (the gun is off when landed), so the next check means something.
   await page.keyboard.down('ArrowUp');
-  await page.waitForTimeout(800);
+  await expect
+    .poll(() => page.evaluate(() => window.__game?.snapshot()?.player.y ?? 999), WAIT)
+    .toBeLessThan(110);
   await page.keyboard.up('ArrowUp');
   await page.keyboard.down('z');
   await page.waitForTimeout(800);

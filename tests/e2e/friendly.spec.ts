@@ -60,9 +60,19 @@ test('bullets fired at a group on its roof hit the first person in line', async 
   await fly(page, { kind: 'move', x, floorY, controls: 'keys' });
   await fly(page, { kind: 'move', x, y, floorY, controls: 'keys' });
   expect((await snapshot(page)).facing).toBe(1);
+  // Fire while the autopilot holds it there (left alone it would sink onto a roof edge).
   await page.keyboard.down('z');
-  await expect.poll(async () => (await snapshot(page)).weapons.peopleHit, WAIT).toBeGreaterThan(0);
+  await fly(page, {
+    kind: 'hold',
+    x,
+    y,
+    floorY,
+    controls: 'keys',
+    untilPeopleHit: true,
+    forMs: 30_000,
+  });
   await page.keyboard.up('z');
+  expect((await snapshot(page)).weapons.peopleHit).toBeGreaterThan(0);
   const s = await snapshot(page);
   const first = s.people.find((p) => p.x === g.left);
   expect(first?.mode).toBe('lost');
