@@ -13,6 +13,7 @@ const t = {
   gravity: 30,
   dragY: 2.5,
   maxStep: 1 / 120,
+  turnSpeed: 40,
 };
 const bounds = { minX: 0, maxX: 10_000, minY: 0, maxY: 10_000 };
 const none: Axis = { x: 0, y: 0 };

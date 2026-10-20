@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FLIGHT, HELI_SHAPE, LANDING } from '../../src/config/tuning';
 import type { FlightState } from '../../src/logic/flight';
 import {
+  bumpDamage,
   landingDamage,
   newHeli,
   span,
@@ -31,6 +32,8 @@ const landing = {
   flareSpeed: 30,
   safeSideSpeed: 30,
   sideDamagePerSpeed: 0.4,
+  bumpSafeSpeed: 30,
+  bumpDamagePerSpeed: 0.08,
 };
 const rules: HeliRules = { flight: FLIGHT, landing, shape };
 
@@ -200,10 +203,18 @@ describe('hard landing', () => {
 describe('turning', () => {
   const left: Axis = { x: -1, y: 0 };
 
-  it('flying does not turn it: it flies backwards facing the same way', () => {
+  it('faces the way it flies once faster than turnSpeed (owner, 2026-10-20)', () => {
     const { heli } = run(heliAt(400, 40), left, 1);
     expect(heli.flight.vx).toBeLessThan(-50);
-    expect(heli.facing).toBe(1);
+    expect(heli.facing).toBe(-1);
+    expect(run(heli, right, 1).heli.facing).toBe(1);
+  });
+
+  it('keeps its facing below turnSpeed, so small nudges while hovering do not flip it', () => {
+    const slow = heliAt(400, 40, 0, -(FLIGHT.turnSpeed - 5));
+    expect(updateHeli(slow, none, 1 / 60, world, rules).heli.facing).toBe(1);
+    const fast = heliAt(400, 40, 0, -(FLIGHT.turnSpeed + 5));
+    expect(updateHeli(fast, none, 1 / 60, world, rules).heli.facing).toBe(-1);
   });
 
   it('the Turn key flips the way it faces, once per press', () => {
@@ -244,7 +255,45 @@ describe('edges and walls', () => {
     expect(events).toContain('bumped');
     const [, bodyRight] = span(heli.flight.x, 1, shape.bodyBack, shape.bodyFront);
     expect(bodyRight).toBeLessThanOrEqual(roof.left);
-    expect(heli.health).toBe(100);
+  });
+
+  describe('flying into a building costs a little health (owner, 2026-10-20)', () => {
+    // Just short of the wall at x 200, flying right at `vx`.
+    const at = (vx: number): Heli => heliAt(roof.left - shape.bodyFront - 1, 200, 0, vx);
+
+    it('costs damage by speed above bumpSafeSpeed', () => {
+      const r = updateHeli(at(150), none, 1 / 60, world, rules);
+      expect(r.event.kind).toBe('bumped');
+      const hit = r.event.kind === 'bumped' ? r.event.damage : 0;
+      expect(hit).toBeGreaterThan(0);
+      // Drag slows it a little during the step: 140 to 150 px/s into the wall.
+      expect(hit).toBeGreaterThanOrEqual(bumpDamage(140, landing));
+      expect(hit).toBeLessThanOrEqual(bumpDamage(150, landing));
+      expect(r.heli.health).toBe(100 - hit);
+      expect(r.heli.mode).not.toBe('crashed');
+    });
+
+    it('a gentle touch is free, and pushing against the wall does not keep draining it', () => {
+      expect(updateHeli(at(20), none, 1 / 60, world, rules).heli.health).toBe(100);
+      const first = updateHeli(at(150), right, 1 / 60, world, rules).heli;
+      const after = run(first, right, 3).heli;
+      expect(after.health).toBe(first.health);
+    });
+
+    it('can crash a helicopter with no health left', () => {
+      const weak = { ...at(150), health: 1 };
+      const r = updateHeli(weak, none, 1 / 60, world, rules);
+      expect(r.event.kind).toBe('crashed');
+      expect(r.heli).toMatchObject({ mode: 'crashed', health: 0 });
+    });
+  });
+
+  it('bumpDamage: free up to bumpSafeSpeed, then bumpDamagePerSpeed per px/s, rounded up', () => {
+    expect(bumpDamage(0, landing)).toBe(0);
+    expect(bumpDamage(30, landing)).toBe(0);
+    expect(bumpDamage(31, landing)).toBe(1);
+    expect(bumpDamage(160, landing)).toBe(11);
+    expect(bumpDamage(160, LANDING)).toBeLessThan(15); // less than one flak hit
   });
 
   it('flies over a building when high enough', () => {
