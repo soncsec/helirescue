@@ -43,6 +43,12 @@ export interface LandingTuning {
   safeSideSpeed: number;
   /** Health lost per px/s of sideways speed above safeSideSpeed. */
   sideDamagePerSpeed: number;
+  /**
+   * Flying into the side of a building (owner's play-test, 2026-10-20): hitting
+   * it faster than bumpSafeSpeed (px/s) costs bumpDamagePerSpeed health per px/s above it.
+   */
+  bumpSafeSpeed: number;
+  bumpDamagePerSpeed: number;
 }
 
 /** Something the helicopter may not land on: a person, standing on a surface. */
@@ -72,7 +78,8 @@ export type HeliEvent =
   | { kind: 'landed'; on: Roof; speed: number }
   | { kind: 'hard-landing'; on: Roof; speed: number; damage: number }
   | { kind: 'blocked' }
-  | { kind: 'bumped' }
+  /** Flew into a building's side; `damage` is 0 for a gentle touch. */
+  | { kind: 'bumped'; damage: number }
   | { kind: 'crashed' }
   | { kind: 'respawned' }
   /** Shot by the enemy (flak); `crashed` instead when it takes the last of the health. */
@@ -141,6 +148,13 @@ export function sideDamage(vx: number, t: LandingTuning): number {
   return speed <= t.safeSideSpeed ? 0 : Math.ceil((speed - t.safeSideSpeed) * t.sideDamagePerSpeed);
 }
 
+/** Health lost flying into a building's side at `impact` px/s (owner, 2026-10-20). */
+export function bumpDamage(impact: number, t: LandingTuning): number {
+  return impact <= t.bumpSafeSpeed
+    ? 0
+    : Math.ceil((impact - t.bumpSafeSpeed) * t.bumpDamagePerSpeed);
+}
+
 /**
  * The flare: over a spot it could land on, within flareZone, the descent is
  * held to flareSpeed (owner, 2026-10-19). Returns the flight unchanged elsewhere.
@@ -179,9 +193,17 @@ function settle(
   facing: 1 | -1,
   world: HeliWorld,
   shape: HeliShape,
-): { flight: FlightState; touched: Roof | null; blocked: boolean; bumped: boolean } {
+): {
+  flight: FlightState;
+  touched: Roof | null;
+  blocked: boolean;
+  bumped: boolean;
+  /** How fast it was flying into the wall it hit (px/s), 0 if none. */
+  impact: number;
+} {
   let f = next;
   let bumped = false;
+  let impact = 0;
 
   // Walls: push the lower body out of any building it has moved into.
   for (const b of world.buildings) {
@@ -197,7 +219,10 @@ function settle(
     // Move out the shorter way.
     const pushLeft = right - b.left;
     const pushRight = b.right - left;
-    const x = pushLeft < pushRight ? f.x - pushLeft : f.x + pushRight;
+    const intoLeft = pushLeft < pushRight;
+    const x = intoLeft ? f.x - pushLeft : f.x + pushRight;
+    // Pushed back left means it was flying right into the wall, and the other way round.
+    impact = Math.max(impact, intoLeft ? f.vx : -f.vx, 0);
     f = { ...f, x, vx: 0 };
     bumped = true;
   }
@@ -215,6 +240,7 @@ function settle(
         touched: null,
         blocked: true,
         bumped,
+        impact,
       };
     }
   }
@@ -226,7 +252,7 @@ function settle(
       if (!touched || s.y < touched.y) touched = s;
     }
   }
-  return { flight: f, touched, blocked: false, bumped };
+  return { flight: f, touched, blocked: false, bumped, impact };
 }
 
 /** True when a landing spot is just below and the helicopter is coming down. */
@@ -241,10 +267,11 @@ function nearLanding(h: Heli, world: HeliWorld, rules: HeliRules): boolean {
 }
 
 /**
- * Advances the helicopter by `dt` seconds of input. `turn` flips the way it
- * faces (the Turn key, H2 as amended 2026-10-18): flying does not turn it, so
- * it can fly backwards while the gun points the other way. It can only turn
- * in the air; landed, it shows its front view.
+ * Advances the helicopter by `dt` seconds of input. It faces the way it flies
+ * once it moves sideways faster than `turnSpeed` (owner's play-test,
+ * 2026-10-20); slower, it keeps its facing, so small nudges while hovering do
+ * not flip it. `turn` (the Turn key, H2 as amended 2026-10-18) flips it while
+ * slower than that. It can only turn in the air; landed, it shows its front view.
  */
 export function updateHeli(
   h: Heli,
@@ -271,15 +298,11 @@ export function updateHeli(
     return { heli: { ...h, mode: 'flying', flight, on: null }, event: { kind: 'took-off' } };
   }
 
-  const facing: 1 | -1 = turn ? (h.facing === 1 ? -1 : 1) : h.facing;
-  const next = flare(
-    h.flight,
-    fly(h.flight, input, dt, rules.flight, world.bounds),
-    facing,
-    dt,
-    world,
-    rules,
-  );
+  const flown = fly(h.flight, input, dt, rules.flight, world.bounds);
+  const turned: 1 | -1 = turn ? (h.facing === 1 ? -1 : 1) : h.facing;
+  const ts = rules.flight.turnSpeed;
+  const facing: 1 | -1 = flown.vx >= ts ? 1 : flown.vx <= -ts ? -1 : turned;
+  const next = flare(h.flight, flown, facing, dt, world, rules);
   const s = settle(h.flight, next, facing, world, rules.shape);
 
   if (s.touched) {
@@ -306,11 +329,21 @@ export function updateHeli(
   }
 
   const moved: Heli = { ...h, flight: s.flight, facing, mode: 'flying' };
+  const bump = s.bumped ? bumpDamage(s.impact, rules.landing) : 0;
+  if (bump > 0) {
+    moved.health = Math.max(0, h.health - bump);
+    if (moved.health === 0) {
+      return {
+        heli: { ...moved, mode: 'crashed', on: null, crashedFor: 0 },
+        event: { kind: 'crashed' },
+      };
+    }
+  }
   moved.mode = nearLanding(moved, world, rules) ? 'landing' : 'flying';
   const event: HeliEvent = s.blocked
     ? { kind: 'blocked' }
     : s.bumped
-      ? { kind: 'bumped' }
+      ? { kind: 'bumped', damage: bump }
       : { kind: 'none' };
   return { heli: moved, event };
 }

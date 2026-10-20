@@ -30,6 +30,8 @@ export const FLIGHT = {
   gravity: 30,
   dragY: 2.5,
   maxStep: 1 / 120,
+  /** Faces the way it flies above a quarter of top speed (owner, 2026-10-20). */
+  turnSpeed: 40,
 } as const;
 
 /**
@@ -66,6 +68,12 @@ export const LANDING = {
   flareSpeed: 30,
   safeSideSpeed: 30,
   sideDamagePerSpeed: 0.4,
+  /**
+   * Flying into the side of a building costs a little health (owner, 2026-10-20):
+   * above 30 px/s, 0.08 per px/s, so a full-speed 160 px/s hit costs 11 (a flak hit is 15).
+   */
+  bumpSafeSpeed: 30,
+  bumpDamagePerSpeed: 0.08,
 } as const;
 
 /** Effects for landings and crashes. */

@@ -5,6 +5,7 @@ import type { Heli, HeliMode } from '../../src/logic/landing';
 import {
   armed,
   flying,
+  gunAim,
   newWeapons,
   updateWeapons,
   type Arena,
@@ -73,6 +74,31 @@ describe('the gun', () => {
     const w = newWeapons(t);
     updateWeapons(w, heli(300, 50, 1, 'flying', -100), hold, 1 / 60, arena, t);
     expect(w.shots.find((s) => s.alive)?.vx).toBe(200);
+  });
+
+  it('fires along the body: leaning into forward flight aims down ahead (owner, 2026-10-20)', () => {
+    const tilted = (facing: 1 | -1, tilt: number): Heli => {
+      const h = heli(300, 50, facing);
+      return { ...h, flight: { ...h.flight, tilt } };
+    };
+    const rad = (12 * Math.PI) / 180;
+    for (const facing of [1, -1] as const) {
+      // Flying forward leans the nose down: tilt +12 facing right, -12 facing left.
+      const w = newWeapons(t);
+      updateWeapons(w, tilted(facing, 12 * facing), hold, 1 / 60, arena, t);
+      const s = w.shots.find((x) => x.alive);
+      expect(s?.vx).toBeCloseTo(facing * 300 * Math.cos(rad));
+      expect(s?.vy).toBeCloseTo(300 * Math.sin(rad)); // downward
+      // From the nose as drawn: ahead of and below the level nose.
+      expect(s?.y).toBeCloseTo(50 + 40 * Math.sin(rad) + 6 * Math.cos(rad));
+      expect(((s?.x ?? 0) - 300) * facing).toBeCloseTo(40 * Math.cos(rad) - 6 * Math.sin(rad));
+    }
+    // Leaning back (slowing down) aims up a little.
+    expect(gunAim(tilted(1, -6), t).dy).toBeLessThan(0);
+    // Level: straight ahead, a unit vector.
+    const level = gunAim(tilted(-1, 0), t);
+    expect(level).toMatchObject({ x: 260, y: 56, dx: -1 });
+    expect(Math.hypot(level.dx, level.dy)).toBeCloseTo(1);
   });
 
   it('repeats every fireEvery while held, and not at all when released', () => {
