@@ -212,6 +212,29 @@ export const LIVES = {
   gameOverSeconds: 2.5,
 } as const;
 
+/**
+ * The difficulty curve across the five missions (M5.1, src/logic/difficulty.ts).
+ * Mission 1 keeps the play-tested numbers above; the last mission's guns and
+ * soldiers fire up to twice as often, with shots up to 30% faster and from up
+ * to 20% further. First values, for the owner to approve by play-test.
+ */
+export const DIFFICULTY = {
+  lastMission: 5,
+  fireRateAtLast: 2,
+  shotSpeedAtLast: 1.3,
+  rangeAtLast: 1.2,
+} as const;
+
+/** "MISSION 2" and its name across the screen as a mission starts (M5.1). */
+export const MISSION_BANNER = {
+  /** Fully shown, then fading out, in seconds. */
+  holdSeconds: 1.8,
+  fadeSeconds: 0.6,
+  y: 92,
+  /** The name sits this far below the "MISSION n" line. */
+  nameGap: 14,
+} as const;
+
 /** Saved data checks (H9, src/logic/save.ts). */
 export const SAVE = {
   /** Highest believable score; a stored value above it counts as corrupt. */
@@ -223,14 +246,14 @@ export const SAVE = {
 export const RESULT = {
   /** Dark panel in the middle of the screen. */
   panelWidth: 300,
-  panelHeight: 200,
+  /** Space above the first text row and below the last; the panel fits its rows. */
+  pad: 14,
   panelColour: 0x140f1f,
   panelAlpha: 0.92,
   border: 0xf0821e,
   /** GAME OVER title colour. */
   danger: '#e0503a',
-  /** Text rows: first row's top, row spacing, and the label and number columns. */
-  top: 50,
+  /** Text rows: row spacing, and the label and number columns. */
   row: 16,
   labelX: 110,
   valueRight: 370,

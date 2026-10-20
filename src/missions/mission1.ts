@@ -10,7 +10,8 @@ const g = (x: number, count: number): { x: number }[] => group(x, count, PEOPLE.
  * helicopter carries 10, so a full rescue takes at least two trips. Each
  * group stands at the far end of its roof, leaving room to land beside it.
  * Building x is in pixels; width and height are in 16-pixel tiles. The
- * mission format with enemies and a difficulty() comes in M5 (H4).
+ * enemy numbers come from difficulty() (src/logic/difficulty.ts); mission 1
+ * keeps the play-tested base numbers.
  */
 export const MISSION_1: WorldMap = {
   width: 1920,
