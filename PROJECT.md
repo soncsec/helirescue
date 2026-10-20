@@ -69,6 +69,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-20 | M5 plan: mission 2 becomes playable first (mission format, `difficulty()`, moving on to the next mission), then tanks, aircraft, missions 3–5 and the victory screen. Backdrops for missions 3–5 come from the same CC0 Ansimuz pack ("Urban landscape" and "Ocean View" day and night), shown to the owner side by side first. The VTOL jet appears from mission 2 and the gunship from mission 4. Tanks appear from mission 2 and fire up at the helicopter when it is low or landed; mission 1 stays as play-tested |
 | 2026-10-20 | Backdrops for missions 3–5, picked from an in-game preview: 3 Downtown (Warped "Urban landscape", by day), 4 Harbour (Warped "Ocean View", day), 5 Mountain town (Gothicvania "night town", same CC0 Ansimuz collection), instead of Ocean View day and night for 4 and 5, so all five missions look different |
 | 2026-10-20 | `?mission=N` stays open in v1.0: any mission can be started from the address, so skipping ahead is allowed. The difficulty limits are recorded in ARCHITECTURE.md H4 |
+| 2026-10-20 | Owner's play-test: tank shells pass in front of buildings, like the soldiers' shots (H5 amended) |
 
 ## 6. Open questions
 
