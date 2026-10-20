@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { START_HINT } from '../config/controls';
 import { sheetSpec } from '../config/assets';
 import {
   BASE_ART,
@@ -176,6 +177,8 @@ export interface GameSnapshot {
   startScore: number;
   /** True while the "MISSION n" banner shows at the start. */
   banner: boolean;
+  /** The banner's lines (mission 1 adds the controls hint). */
+  bannerLines: string[];
   /** Shots flying now, totals so far, and how many game objects exist (pooling: it stays flat). */
   weapons: {
     bullets: number;
@@ -583,6 +586,7 @@ export class GameScene extends Phaser.Scene {
       mission: this.start.mission,
       startScore: this.start.startScore,
       banner: this.banner.some((t) => t.visible && t.alpha > 0),
+      bannerLines: this.banner.map((t) => t.text),
       weapons: {
         bullets: flying(this.weapons, 'bullet'),
         bombs: flying(this.weapons, 'bomb'),
@@ -756,17 +760,32 @@ export class GameScene extends Phaser.Scene {
         .setDepth(3)
         .setShadow(1, 1, HUD.shadow, 0, false, true);
     const { mission } = this.start;
-    this.banner = [
+    const fade = (targets: Phaser.GameObjects.Text[], seconds: number): void => {
+      this.tweens.add({
+        targets,
+        alpha: 0,
+        delay: seconds * 1000,
+        duration: B.fadeSeconds * 1000,
+        onComplete: () => targets.forEach((t) => t.setVisible(false)),
+      });
+    };
+    const title = [
       line(B.y, `MISSION ${mission}`, HUD.accent),
       line(B.y + B.nameGap, missionAt(mission).name, HUD.colour),
     ];
-    this.tweens.add({
-      targets: this.banner,
-      alpha: 0,
-      delay: B.holdSeconds * 1000,
-      duration: B.fadeSeconds * 1000,
-      onComplete: () => this.banner.forEach((t) => t.setVisible(false)),
-    });
+    fade(title, B.holdSeconds);
+    this.banner = [...title];
+    // Mission 1 also points out the bomb and where the controls are, for longer
+    // (owner's play-test, 2026-10-20: bombs were easy to miss).
+    if (mission === 1) {
+      const hint = line(
+        B.y + B.hintGap,
+        this.touch ? START_HINT.touch : START_HINT.keys,
+        HUD.colour,
+      );
+      fade([hint], B.hintSeconds);
+      this.banner.push(hint);
+    }
   }
 
   /** The rotor's hum: a loop that follows the helicopter (see drawRotor). */
