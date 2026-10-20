@@ -33,6 +33,11 @@ export interface FlightTuning {
   dragY: number;
   /** Longest single physics step in seconds; longer frames are split. */
   maxStep: number;
+  /**
+   * Flying sideways faster than this (px/s) turns the helicopter to face the
+   * way it flies (owner's play-test, 2026-10-20). Slower nudges keep its facing.
+   */
+  turnSpeed: number;
 }
 
 /** A helicopter at rest at (x, y). */

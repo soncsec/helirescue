@@ -56,6 +56,7 @@ tools/docs-page/       builds the docs page from the four docs
 - **Alternatives:** Phaser Arcade velocity alone (too little control over hovering and landing); Matter.js rigid-body physics (realistic, but hard to tune and test).
 - **Tradeoffs:** a small amount of our own code, in return for flight that is unit tested and easy to tune.
 - **Amended 2026-10-18 (confirmed by the owner):** facing is set by a Turn key or button, not by the direction of flight, so the gun fires the way the helicopter faces and it can retreat while shooting (as in Choplifter). Built in M3.5: C or the touch Turn button, airborne only.
+- **Amended 2026-10-20 (owner's play-test: "when flying left the helicopter should face left"):** it turns to face the way it flies once its sideways speed passes `turnSpeed` (40 px/s, a quarter of top speed), so small nudges while hovering don't flip it. Turn still flips it below that speed. The gun fires along the body as drawn, tilted with it, so leaning into forward flight aims down ahead instead of level with the horizon.
 
 ### H3: Landing and boarding rules — *Accepted 2026-10-18*
 
@@ -63,6 +64,7 @@ tools/docs-page/       builds the docs page from the four docs
 - **Alternatives:** rules written inside the Phaser scene (hard to test).
 - **Tradeoffs:** these rules decide score and fairness, so they get unit tests; scenes only draw the states.
 - **Amended 2026-10-19 (owner's play-test):** within `flareZone` of a landing spot the descent is capped at `flareSpeed` (under the safe speed), so holding Down lands gently; a hard landing comes from touching down faster sideways than `safeSideSpeed`.
+- **Amended 2026-10-20 (owner's play-test):** flying into the side of a building costs a little health: above `bumpSafeSpeed` (30 px/s), `bumpDamagePerSpeed` per px/s, so a full-speed hit costs 11 (a flak hit is 15). Resting against a wall costs nothing more.
 
 ### H4: Missions as data — *Accepted 2026-10-18*
 

@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fly } from './autopilot';
 import { openGame, openTitle } from './helpers';
-import { HELI_SHAPE, TOUCH } from '../../src/config/tuning';
+import { FLIGHT, HELI_SHAPE, LANDING, TOUCH } from '../../src/config/tuning';
+import { bumpDamage } from '../../src/logic/landing';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
 /** Records console errors, uncaught exceptions and requests to other hosts. */
@@ -89,10 +90,9 @@ test('the helicopter starts over the base, flies with tilt, and the camera follo
     .toBeLessThan(Math.min(before.player.y - 10, CLEAR_Y));
   await page.keyboard.up('ArrowUp');
 
-  // Turn around with C (flying does not turn it), then fly left.
-  await page.keyboard.press('c');
-  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
+  // Fly left: it turns to face the way it flies (owner, 2026-10-20).
   await page.keyboard.down('ArrowLeft');
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
   await expect.poll(async () => (await snapshot(page)).cameraX, MOVE).toBe(0);
   await page.waitForTimeout(1500);
   await page.keyboard.up('ArrowLeft');
@@ -153,7 +153,7 @@ test('touching down while still flying sideways fast is a hard landing', async (
   expect(after.on?.base).toBe(true);
 });
 
-test('flying low into a building stops at its wall', async ({ page }) => {
+test('flying low into a building stops at its wall, for a little damage', async ({ page }) => {
   test.slow();
   await openGame(page);
   const firstBuilding = (await snapshot(page)).roofs[1];
@@ -163,7 +163,9 @@ test('flying low into a building stops at its wall', async ({ page }) => {
   await page.keyboard.up('ArrowRight');
   const s = await snapshot(page);
   expect(s.player.x).toBeLessThan(firstBuilding.left);
-  expect(s.health).toBe(100);
+  // A little damage (owner, 2026-10-20): never more than a full-speed hit costs.
+  expect(s.health).toBeLessThan(100);
+  expect(s.health).toBeGreaterThanOrEqual(100 - bumpDamage(160, LANDING));
 });
 
 test('the HUD shows the rescue status and groups wait on roofs across the city', async ({
@@ -279,24 +281,27 @@ test('a phone held upright is asked to turn, and the game pauses', async ({
   await context.close();
 });
 
-test('flying backwards keeps the facing; C turns around, once per press', async ({ page }) => {
+test('it faces the way it flies; while hovering C turns it, once per press', async ({ page }) => {
   test.slow();
   await openGame(page);
   await page.keyboard.down('ArrowUp');
   await expect.poll(async () => (await snapshot(page)).player.y, MOVE).toBeLessThan(CLEAR_Y);
   await page.keyboard.up('ArrowUp');
-  // Flying left with no turn: moving backwards, still facing right.
+  // Flying left turns it left once it is faster than turnSpeed (owner, 2026-10-20).
   await page.keyboard.down('ArrowLeft');
-  await expect.poll(async () => (await snapshot(page)).velocity.x, MOVE).toBeLessThan(-20);
-  await page.keyboard.up('ArrowLeft');
-  expect((await snapshot(page)).facing).toBe(1);
-  // One press, one turn.
-  await page.keyboard.press('c');
+  await expect
+    .poll(async () => (await snapshot(page)).velocity.x, MOVE)
+    .toBeLessThan(-FLIGHT.turnSpeed);
   await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
-  await page.waitForTimeout(300);
-  expect((await snapshot(page)).facing).toBe(-1);
+  await page.keyboard.up('ArrowLeft');
+  // Hovering again: one press of C, one turn.
+  await expect.poll(async () => Math.abs((await snapshot(page)).velocity.x), MOVE).toBeLessThan(5);
   await page.keyboard.press('c');
   await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(1);
+  await page.waitForTimeout(300);
+  expect((await snapshot(page)).facing).toBe(1);
+  await page.keyboard.press('c');
+  await expect.poll(async () => (await snapshot(page)).facing, MOVE).toBe(-1);
 });
 
 test('the touch Turn button turns the helicopter around', async ({ browser, browserName }) => {

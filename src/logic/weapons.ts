@@ -141,6 +141,29 @@ function spawn(pool: Shot[], kind: ShotKind): Shot | null {
 }
 
 /**
+ * Where the gun's nose is and which way it points (owner's play-test,
+ * 2026-10-20): along the body, tilted as drawn, so leaning into forward flight
+ * aims the gun down ahead, not level with the horizon. (dx, dy) is a unit vector.
+ */
+export function gunAim(
+  h: Heli,
+  t: Pick<WeaponsTuning, 'noseX' | 'noseY'>,
+): { x: number; y: number; dx: number; dy: number } {
+  const f = h.flight;
+  // The sprite turns clockwise by `tilt` degrees (y points down), flipped when facing left.
+  const a = (f.tilt * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const nx = h.facing * t.noseX;
+  return {
+    x: f.x + nx * cos - t.noseY * sin,
+    y: f.y + nx * sin + t.noseY * cos,
+    dx: h.facing * cos,
+    dy: h.facing * sin,
+  };
+}
+
+/**
  * Advances the gun, the bomb bay and every shot by `dt` seconds. `fire` is
  * held (repeats every fireEvery); `bomb` is one press. Changes `w` in place.
  */
@@ -182,12 +205,13 @@ export function updateWeapons(
   if (input.fire && armed(h) && w.fireIn === 0) {
     const s = spawn(w.shots, 'bullet');
     if (s) {
+      const g = gunAim(h, t);
       Object.assign(s, {
         alive: true,
-        x: f.x + h.facing * t.noseX,
-        y: f.y + t.noseY,
-        vx: h.facing * t.bulletSpeed + f.vx,
-        vy: 0,
+        x: g.x,
+        y: g.y,
+        vx: g.dx * t.bulletSpeed + f.vx,
+        vy: g.dy * t.bulletSpeed,
         age: 0,
       });
       w.fireIn = t.fireEvery;
