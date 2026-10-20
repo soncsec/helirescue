@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, HUD, RESULT } from '../config/tuning';
 import type { MissionResult } from '../logic/score';
+import { play } from './sound';
 
 /** What the game scene hands the result screen. */
 export interface ResultData {
@@ -40,6 +41,7 @@ export class ResultScene extends Phaser.Scene {
 
   create(): void {
     const { kind, result: r, highScore, newHigh, touch } = this.data_;
+    play(this, kind === 'gameover' ? 'sfx-game-over' : 'sfx-complete');
     const R = RESULT;
     this.add
       .rectangle(
@@ -105,6 +107,7 @@ export class ResultScene extends Phaser.Scene {
   private again(): void {
     if (this.leaving) return;
     this.leaving = true;
+    play(this, 'sfx-select');
     this.scene.stop();
     this.scene.start('Game');
   }

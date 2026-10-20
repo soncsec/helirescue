@@ -27,6 +27,7 @@ test('the title shows the name, the keyboard controls, the high score and the cr
       'X DROP A BOMB',
       'C TURN AROUND',
       'P / ESC PAUSE',
+      'M SOUND: ON',
       'HIGH SCORE 0',
       'PRESS ENTER TO START',
       'PRESS K FOR CREDITS',
@@ -108,7 +109,10 @@ test('on a phone, the CREDITS button opens the credits and a tap goes back', asy
   const box = await page.locator('#game canvas').boundingBox();
   if (!box) throw new Error('no canvas');
   const zoom = box.width / GAME_WIDTH;
-  await page.mouse.click(box.x + (GAME_WIDTH / 2) * zoom, box.y + TITLE.creditY * zoom);
+  await page.mouse.click(
+    box.x + (GAME_WIDTH / 2 - TITLE.buttonSpread) * zoom,
+    box.y + TITLE.creditY * zoom,
+  );
   await expect.poll(() => scene(page)).toBe('Credits');
   expect((await page.evaluate(() => window.__game?.credits() ?? null))?.lines).toContain(
     'TAP TO GO BACK',

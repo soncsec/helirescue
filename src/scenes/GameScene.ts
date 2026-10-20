@@ -92,6 +92,8 @@ import {
 import type { HudState } from './HudScene';
 import type { ResultData } from './ResultScene';
 import { loadSave, storeSave } from './storage';
+import { ensureMusic, loadSounds, play, toggleMute } from './sound';
+import { SOUNDS } from '../config/audio';
 
 /** Read-only view of the game state, used by the e2e test hook. */
 export interface GameSnapshot {
@@ -173,6 +175,8 @@ export class GameScene extends Phaser.Scene {
   private hutDoorX = 0;
   private heliEvents: GameSnapshot['events'] = [];
   private keys!: Keys;
+  /** The rotor loop; null between scenes. */
+  private rotor: Phaser.Sound.BaseSound | null = null;
   /** C was pressed since the last frame. */
   private turnPressed = false;
   /** X was pressed since the last frame. */
@@ -219,6 +223,7 @@ export class GameScene extends Phaser.Scene {
 
   preload(): void {
     loadArt(this);
+    loadSounds(this);
   }
 
   create(): void {
@@ -279,6 +284,8 @@ export class GameScene extends Phaser.Scene {
     this.makeWeapons();
     this.makeEnemies();
     this.makeSquad();
+    this.startRotor();
+    ensureMusic(this);
     this.boom.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.boom.setVisible(false));
     this.touch = wantsTouch(window.location.search, (q) => window.matchMedia(q).matches)
       ? { axis: { x: 0, y: 0 }, pause: false, turn: false, fire: false, bomb: false }
@@ -316,6 +323,7 @@ export class GameScene extends Phaser.Scene {
     });
     kb.on('keydown-P', () => this.pauseGame());
     kb.on('keydown-ESC', () => this.pauseGame());
+    kb.on('keydown-M', () => toggleMute(this));
 
     // Pause when the tab or app loses focus (owner, 2026-10-18), so nothing
     // happens to the helicopter while the player is away.
@@ -335,6 +343,7 @@ export class GameScene extends Phaser.Scene {
   pauseGame(): void {
     if (this.over || !this.scene.isActive()) return;
     if (this.touch) this.touch.pause = false;
+    this.rotor?.pause();
     this.scene.launch('Pause', { touch: this.touch !== null });
     this.scene.pause();
   }
@@ -507,8 +516,48 @@ export class GameScene extends Phaser.Scene {
       newHigh: isNew,
       touch: this.touch !== null,
     };
+    this.rotor?.stop();
     this.scene.launch('Result', show);
     this.scene.pause();
+  }
+
+  /** The rotor's hum: a loop that follows the helicopter (see drawRotor). */
+  private startRotor(): void {
+    this.rotor?.destroy();
+    this.rotor = this.sound.add('sfx-rotor', { volume: SOUNDS['sfx-rotor'].volume, loop: true });
+    this.rotor.play();
+    this.events.off(Phaser.Scenes.Events.RESUME, this.resumeRotor, this);
+    this.events.on(Phaser.Scenes.Events.RESUME, this.resumeRotor, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.rotor?.destroy();
+      this.rotor = null;
+    });
+  }
+
+  private resumeRotor(): void {
+    if (!this.over) this.rotor?.resume();
+  }
+
+  /** Faster while climbing, slower and quieter when landed, silent in a wreck. */
+  private drawRotor(axis: Axis): void {
+    const r = this.rotor as Phaser.Sound.WebAudioSound | null;
+    if (!r) return;
+    const h = this.heli;
+    if (h.mode === 'crashed') {
+      if (r.isPlaying) r.pause();
+      return;
+    }
+    if (r.isPaused && this.scene.isActive()) r.resume();
+    const rate =
+      h.mode === 'landed'
+        ? LANDING_FX.rotorLanded
+        : axis.y < 0
+          ? PLAYER.rotorClimb
+          : PLAYER.rotorIdle;
+    if (typeof r.setRate === 'function') r.setRate(0.75 + rate / 4);
+    if (typeof r.setVolume === 'function') {
+      r.setVolume(SOUNDS['sfx-rotor'].volume * (h.mode === 'landed' ? 0.5 : 1));
+    }
   }
 
   private log(kind: GameSnapshot['events'][number]): void {
@@ -518,6 +567,10 @@ export class GameScene extends Phaser.Scene {
 
   private onPeopleEvent(event: PeopleEvent): void {
     this.log(event.kind);
+    play(
+      this,
+      event.kind === 'boarded' ? 'sfx-board' : event.kind === 'saved' ? 'sfx-saved' : 'sfx-lost',
+    );
     if (event.kind !== 'saved') return;
     const base = this.roofs[0];
     const popup = this.add
@@ -554,6 +607,10 @@ export class GameScene extends Phaser.Scene {
 
   private onEvent(event: HeliEvent): void {
     this.log(event.kind);
+    if (event.kind === 'landed') play(this, 'sfx-land');
+    else if (event.kind === 'hard-landing') play(this, 'sfx-hard-land');
+    else if (event.kind === 'crashed') play(this, 'sfx-crash');
+    else if (event.kind === 'hit') play(this, 'sfx-heli-hit');
     const { flight: f } = this.heli;
     if (event.kind === 'hard-landing') {
       this.cameras.main.shake(LANDING_FX.shakeMs, LANDING_FX.shakeStrength);
@@ -586,6 +643,7 @@ export class GameScene extends Phaser.Scene {
         : axis.y < 0
           ? PLAYER.rotorClimb
           : PLAYER.rotorIdle;
+    this.drawRotor(axis);
   }
 
   /** Keeps more of the view ahead of the helicopter than behind it. */
@@ -697,7 +755,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onSoldierEvent(e: SoldierEvent): void {
-    if (e.kind === 'soldier-fired') return;
+    if (e.kind === 'soldier-fired') {
+      play(this, 'sfx-soldier-shot');
+      return;
+    }
     if (e.kind === 'person-hit') {
       const { people, event } = shootPerson(this.people, e.id);
       this.people = people;
@@ -718,7 +779,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEnemyEvent(e: EnemyEvent): void {
-    if (e.kind === 'flak') return;
+    if (e.kind === 'flak') {
+      play(this, 'sfx-flak');
+      return;
+    }
     if (e.kind === 'burst') {
       const fx = this.bursts[this.nextBurst++ % this.bursts.length];
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'burst', repeat: 0 });
@@ -735,6 +799,7 @@ export class GameScene extends Phaser.Scene {
     }
     // A gun destroyed: an explosion where it stood.
     this.log('gun-destroyed');
+    play(this, 'sfx-blast');
     const fx = this.blasts[this.nextBlast++ % this.blasts.length];
     fx?.setPosition(e.x, e.y)
       .setOrigin(0.5, 0.8)
@@ -772,12 +837,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onWeaponEvent(e: WeaponEvent): void {
-    if (e.kind === 'fired') this.shotCounts.fired++;
-    else if (e.kind === 'dropped') {
+    if (e.kind === 'fired') {
+      this.shotCounts.fired++;
+      play(this, 'sfx-gun');
+    } else if (e.kind === 'dropped') {
       this.shotCounts.dropped++;
+      play(this, 'sfx-bomb-drop');
       this.log('dropped');
     } else if (e.kind === 'impact') {
       this.shotCounts.impacts++;
+      play(this, 'sfx-spark');
       const fx = this.sparks[this.nextSpark++ % this.sparks.length];
       fx?.setPosition(e.x, e.y).setVisible(true).play({ key: 'spark', repeat: 0 });
       if (e.target !== undefined) {
@@ -796,6 +865,7 @@ export class GameScene extends Phaser.Scene {
       }
     } else {
       this.shotCounts.blasts++;
+      play(this, 'sfx-blast');
       this.log('blast');
       // A bomb hits any people close enough to the blast (owner, 2026-10-19).
       for (const p of this.people) {
