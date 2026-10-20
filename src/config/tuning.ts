@@ -271,6 +271,45 @@ export const JETS = {
   warnBlinkMs: 150,
 } as const;
 
+/**
+ * Enemy gunships (roadmap M5.3, src/logic/gunships.ts), from mission 4: they
+ * hover high over their stretch of the map and fire aimed bursts of 3 (6
+ * health each) at a helicopter in range, every 4.5 to 5.5 s in mission 4's
+ * base numbers (difficulty() makes that about 3 s by mission 4); a moving
+ * helicopter dodges them, as they aim where it is, not where it is going. 6
+ * bullets bring one down. The sprite is 106x77, facing right, with the hull 96x62 around its
+ * centre. First values, to tune after the owner's play-test.
+ */
+export const GUNSHIPS = {
+  speed: 25,
+  bob: 4,
+  bobSeconds: 1.6,
+  range: 220,
+  reloadMin: 4.5,
+  reloadMax: 5.5,
+  firstShot: 2,
+  burst: 3,
+  burstGap: 0.18,
+  hp: 6,
+  halfWidth: 44,
+  halfHeight: 26,
+  /** Drawn size either side of the centre: maps keep it in the world and above the roofs. */
+  spriteHalfWidth: 48,
+  spriteHalfHeight: 31,
+  gunX: 40,
+  gunY: 14,
+  shotSpeed: 190,
+  shotLife: 2,
+  shotDamage: 6,
+  maxShots: 9,
+  turnSeconds: 0.6,
+  heliHalfWidth: ENEMIES.heliHalfWidth,
+  heliHalfHeight: ENEMIES.heliHalfHeight,
+  hitStep: 4,
+  /** Shots reuse the bullet sprite, tinted cyan. */
+  shotTint: 0x6ae0ff,
+} as const;
+
 /** Pooled effect sprites: spark per bullet impact, explosion per bomb blast. */
 export const EFFECTS = {
   sparks: 8,
@@ -437,6 +476,9 @@ export const WORLD_LIMITS = {
   tankHalfWidth: TANKS.spriteHalfWidth,
   /** Jet passes are a surprise now and then, never a stream (M5.3). */
   jetGap: 15,
+  /** A gunship's drawn half size: its hover keeps clear of the roofs below and the world edges. */
+  gunshipHalfWidth: GUNSHIPS.spriteHalfWidth,
+  gunshipHalfHeight: GUNSHIPS.spriteHalfHeight,
 } as const;
 
 /** Camera follow (H1). */

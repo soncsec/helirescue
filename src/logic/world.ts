@@ -38,6 +38,11 @@ export interface WorldMap {
   tanks?: readonly { x: number; patrol: number }[];
   /** Enemy jet passes (M5.3): seconds before the first, and between passes. */
   jets?: { first: number; every: number };
+  /**
+   * Gunships (M5.3): they hover at height y (centre), `patrol` px either side
+   * of x, above every roof they pass over.
+   */
+  gunships?: readonly { x: number; y: number; patrol: number }[];
 }
 
 /** Where a soldier stands and walks: on a roof, or on the street in a gap between buildings. */
@@ -69,6 +74,9 @@ export interface WorldLimits {
   tankHalfWidth: number;
   /** Fewest seconds before the first jet pass and between passes. */
   jetGap: number;
+  /** A gunship's drawn half size: its hover keeps clear of roofs below and the world edges. */
+  gunshipHalfWidth: number;
+  gunshipHalfHeight: number;
 }
 
 /** A flat roof surface: where the helicopter can land and people wait. */
@@ -194,6 +202,18 @@ export function worldProblems(world: WorldMap, limits: WorldLimits): string[] {
   if (world.jets && !(world.jets.first >= limits.jetGap && world.jets.every >= limits.jetGap)) {
     problems.push(`jet passes come less than ${limits.jetGap} s apart`);
   }
+  (world.gunships ?? []).forEach((g, i) => {
+    const lo = g.x - g.patrol - limits.gunshipHalfWidth;
+    const hi = g.x + g.patrol + limits.gunshipHalfWidth;
+    const bottom = g.y + limits.gunshipHalfHeight;
+    const below = solid.filter((r) => hi > r.left && lo < r.right);
+    if (!(g.patrol >= 0)) problems.push(`gunship ${i} has a negative patrol`);
+    else if (lo < 0 || hi > world.width || g.y - limits.gunshipHalfHeight < 0) {
+      problems.push(`gunship ${i} flies outside the world`);
+    } else if (below.some((r) => bottom + limits.personMargin > r.y)) {
+      problems.push(`gunship ${i} flies into a roof`);
+    }
+  });
   (world.tanks ?? []).forEach((k, i) => {
     const lo = k.x - k.patrol - limits.tankHalfWidth;
     const hi = k.x + k.patrol + limits.tankHalfWidth;

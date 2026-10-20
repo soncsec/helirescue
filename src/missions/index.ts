@@ -2,6 +2,8 @@ import type { WorldMap } from '../logic/world';
 import { MISSION_1 } from './mission1';
 import { MISSION_2 } from './mission2';
 import { MISSION_3 } from './mission3';
+import { MISSION_4 } from './mission4';
+import { MISSION_5 } from './mission5';
 
 /** One mission (H4): its name, shown as it starts and on the result screen, and its map. */
 export interface Mission {
@@ -10,13 +12,14 @@ export interface Mission {
 }
 
 /**
- * Every mission in order; mission n is MISSIONS[n - 1]. Missions 4 and 5
- * follow in M5.4.
+ * Every mission in order; mission n is MISSIONS[n - 1].
  */
 export const MISSIONS: readonly Mission[] = [
   { name: 'NIGHT CITY', map: MISSION_1 },
   { name: 'FACTORY DISTRICT', map: MISSION_2 },
   { name: 'DOWNTOWN', map: MISSION_3 },
+  { name: 'HARBOUR', map: MISSION_4 },
+  { name: 'MOUNTAIN TOWN', map: MISSION_5 },
 ];
 
 /** Mission n (from 1). */
