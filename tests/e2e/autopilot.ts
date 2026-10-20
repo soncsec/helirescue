@@ -34,7 +34,7 @@ export interface Leg {
   untilTankDown?: number;
   /** hold: stop once a jet has been shot down (M5.3). */
   untilJetDown?: boolean;
-  /** hold: stop once this event is in the game's event log (M5.3). */
+  /** move or hold: stop once this event is in the game's event log (M5.3). */
   untilEvent?: GameSnapshot['events'][number];
   /** hold: stop after this long even if the gun still stands (ms). */
   forMs?: number;
@@ -172,6 +172,7 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
             );
           }
           if (leg.untilHits !== undefined && s.enemies.hitsTaken >= leg.untilHits) return true;
+          if (leg.untilEvent !== undefined && s.events.includes(leg.untilEvent)) return true;
           // Stopped and nearly level: any tilt left would keep pushing it sideways.
           // With a height to fly at, it must be there too.
           const atHeight = leg.y === undefined || Math.abs(s.player.y - leg.y) <= p.band;

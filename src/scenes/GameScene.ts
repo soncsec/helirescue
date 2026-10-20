@@ -157,6 +157,7 @@ export interface GameSnapshot {
     | 'gun-destroyed'
     | 'soldier-down'
     | 'tank-destroyed'
+    | 'tank-hit'
     | 'jet-in'
     | 'jet-down'
     | 'gunship-down'
@@ -1001,6 +1002,8 @@ export class GameScene extends Phaser.Scene {
 
   private onTankEvent(e: TankEvent): void {
     if (e.kind === 'heli-hit' || e.kind === 'burst') {
+      // Logged so tests can tell a tank's hit from a gun's.
+      if (e.kind === 'heli-hit') this.log('tank-hit');
       this.onEnemyEvent(e);
       return;
     }
