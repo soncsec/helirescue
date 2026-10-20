@@ -176,6 +176,8 @@ test('the HUD shows the rescue status and groups wait on roofs across the city',
     maxHealth: 100,
     saved: 0,
     total: 16,
+    // 70% of 16, rounded up (owner, 2026-10-20).
+    needed: 12,
     aboard: 0,
     capacity: 10,
     score: 0,
