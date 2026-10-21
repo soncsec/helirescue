@@ -87,4 +87,4 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 
 ## Releasing
 
-Only with the owner's approval for each release: `scripts/release.sh deploy` (see README). It refuses unless HEAD is `origin/main`, the tree is clean and CI (including the ZAP scan of staging) passed on that commit.
+Only with the owner's approval for each release: `scripts/release.sh deploy` (see README). It refuses unless HEAD is `origin/main`, the tree is clean and CI (including the ZAP scan of staging) passed on that commit. Its local browser tests get one rerun of only the failed tests (owner, 2026-10-21, for a busy shared machine); a test that fails twice stops the release.

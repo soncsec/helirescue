@@ -104,7 +104,20 @@ build() {
   step "Install, check and build"
   npm ci --silent
   npm audit --audit-level=high
-  npm run check
+  npm run check:static
+  # Browser tests can time out when other game sessions load the shared machine
+  # (owner, 2026-10-21): rerun only the failed ones, once. A test that fails
+  # twice still stops the release, and the first run's failures stay in the log.
+  local last=test-results/.last-run.json
+  rm -f "$last"
+  if ! npm run test:e2e; then
+    # Rerun only when this run recorded which tests failed (not, say, a server
+    # that never started), so an old results file can't stand in for it.
+    python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); sys.exit(0 if r.get("status") == "failed" and r.get("failedTests") else 1)' "$last" 2>/dev/null ||
+      die "browser tests failed without a list of failed tests to rerun"
+    echo "release: some browser tests failed; rerunning only those, once" >&2
+    npm run test:e2e -- --last-failed || die "browser tests failed again on the rerun"
+  fi
   if grep -rq __game dist; then die "test hook found in dist/"; fi
 }
 
