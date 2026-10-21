@@ -156,7 +156,7 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
   - [x] Tank shells pass in front of buildings, like the soldiers' shots
   - [x] A mission needs 70% of its people saved to count as complete
   - [x] Bombs ("grenades"): the owner hadn't found them, so the pause screen now lists every control and mission 1 starts with an "X: DROP A BOMB   P: CONTROLS" hint
-- [ ] M6.2 Refresh the portal card image (256×192 gameplay shot) for v1.0, by portal PR (the card went `live` in M2.5)
+- [x] M6.2 Refresh the portal card image (256×192 gameplay shot) for v1.0, by portal PR (the card went `live` in M2.5): the owner compared new Downtown and Harbour shots with the current card and kept the current one (2026-10-21), so no portal change
 - [ ] M6.3 Full security checks: CodeQL, npm audit, Gitleaks, ZAP on staging and production
 - [ ] M6.4 Production release with the owner's approval; docs updated
 
