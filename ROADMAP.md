@@ -166,5 +166,7 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
   - [x] No third-party requests: the build's only `http(s)` strings are Phaser's console banner link and the SVG/XHTML namespace names, which are never fetched. localStorage holds only the `helirescue` key (H9)
   - [x] Unchanged by design: the site is served over HTTP on port 80 (ADR-010, the owner's decision); the game sends no personal data and holds no secrets
 - [ ] M6.4 Production release with the owner's approval; docs updated
+  - [x] The owner approved the v1.0 release of main after #53, tagged `v1.0.0` (2026-10-21). GitHub never ran CI on the #53 merge commit, so this PR's merge gives the release a commit with CI
+  - [ ] Released and tagged; production check passed
 
 **Acceptance criteria:** every item in PROJECT.md section 4 (definition of done) is met and checked on the live site, on a desktop and on a phone.
