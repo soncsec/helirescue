@@ -157,7 +157,14 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
   - [x] A mission needs 70% of its people saved to count as complete
   - [x] Bombs ("grenades"): the owner hadn't found them, so the pause screen now lists every control and mission 1 starts with an "X: DROP A BOMB   P: CONTROLS" hint
 - [x] M6.2 Refresh the portal card image (256×192 gameplay shot) for v1.0, by portal PR (the card went `live` in M2.5): the owner compared new Downtown and Harbour shots with the current card and kept the current one (2026-10-21), so no portal change
-- [ ] M6.3 Full security checks: CodeQL, npm audit, Gitleaks, ZAP on staging and production
+- [x] M6.3 Full security checks: CodeQL, npm audit, Gitleaks, ZAP on staging and production (2026-10-21, on main `8a3fd88` and live release `20261021T121636Z-32dcdc07`)
+  - [x] CodeQL: analysis passes on main; 0 open code-scanning alerts. Dependabot: 0 open alerts. Secret scanning: 0 alerts
+  - [x] `npm audit --audit-level=high`: 0 vulnerabilities
+  - [x] Gitleaks: no leaks in the full history (CI's pinned 8.30.1 on every push, and a local `gitleaks detect` over all commits)
+  - [x] ZAP: staging (GitHub Pages) 0 failures; production (Production check run 39598335535) 0 failures. Production's warnings are informational (cacheable content, COEP not set, a Unix-timestamp-like number, "modern web app"). Staging's header warnings come from GitHub Pages, which can't set headers; production sends them
+  - [x] Production headers: a strict CSP (`default-src 'self'`, no inline scripts), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, and a Permissions-Policy that blocks camera, microphone, location, payment and USB
+  - [x] No third-party requests: the build's only `http(s)` strings are Phaser's console banner link and the SVG/XHTML namespace names, which are never fetched. localStorage holds only the `helirescue` key (H9)
+  - [x] Unchanged by design: the site is served over HTTP on port 80 (ADR-010, the owner's decision); the game sends no personal data and holds no secrets
 - [ ] M6.4 Production release with the owner's approval; docs updated
 
 **Acceptance criteria:** every item in PROJECT.md section 4 (definition of done) is met and checked on the live site, on a desktop and on a phone.
