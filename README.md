@@ -21,7 +21,10 @@ Follow `NEW-GAME.md` in [soncsec/games-portal](https://github.com/soncsec/games-
 npm ci
 npm run dev          # http://localhost:5180
 npm run check        # everything CI runs
+scripts/limit-cpu.sh npm run check   # the same, at low priority and on at most 4 cores
 ```
+
+The dev machine is shared with other game sessions. Run long test runs and releases through `scripts/limit-cpu.sh`, and start them only when both the 1- and 5-minute load averages (`/proc/loadavg`) are under 35.
 
 ## Releasing to production
 
@@ -31,7 +34,7 @@ Only with the owner's approval for each release.
 cp deploy/server.env.example deploy/server.env   # once; fill in the real values (git-ignored)
 git checkout main && git pull
 scripts/release.sh deploy --dry-run   # checks and build only
-scripts/release.sh deploy             # upload, switch, smoke test (rolls back on failure)
+scripts/limit-cpu.sh scripts/release.sh deploy   # upload, switch, smoke test (rolls back on failure)
 scripts/release.sh rollback           # back to the previous release
 scripts/release.sh activate <id>      # switch to a specific release
 scripts/release.sh status             # list releases on the server
