@@ -74,6 +74,7 @@ Out of scope for v1: online scores, accounts, gamepad controls, power-ups, a lev
 | 2026-10-20 | Controls help (owner's play-test: bombs were easy to miss): the pause screen lists every control, and mission 1 starts with a hint for the bomb and the pause screen. The Turn key stays |
 | 2026-10-20 | Owner's play-test: a mission needs at least 70% of its people saved (rounded up: 12 of 16 in mission 1). It fails as soon as too many are lost to reach that; Retry restarts it with the score it was entered with. The HUD shows NEED under SAVED (scope change) |
 | 2026-10-21 | Release gate: the static checks and unit tests must pass first time. If any local browser test fails, `scripts/release.sh` reruns only the failed ones, once, and stops the release if any fails again. Other game sessions on the shared machine made the browser tests time out (load 36–85) and refused four releases that GitHub CI had passed |
+| 2026-10-21 | Owner's play-test of release `20261021T121636Z-32dcdc07` ("Looks good"): the M6.1 changes are accepted and the difficulty curve across the 5 missions is approved, which closes M5 |
 
 ## 6. Open questions
 

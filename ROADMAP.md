@@ -13,8 +13,8 @@
 | M2 Walking skeleton (to production) | Done (2026-10-19) |
 | M3 Mission 1 playable | Done (2026-10-19) |
 | M4 Sound | Done (2026-10-19) |
-| M5 Missions 2–5 | In progress |
-| M6 Polish and v1.0 release | Not started |
+| M5 Missions 2–5 | Done (2026-10-21) |
+| M6 Polish and v1.0 release | In progress |
 
 ## Risks driving this order
 
@@ -145,11 +145,13 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
 
 **Acceptance criteria:** all 5 missions can be completed; difficulty limits enforced by tests; an e2e test loads each mission; the owner approves the difficulty curve.
 
+**Accepted** by the owner on 2026-10-21 after play-testing release `20261021T121636Z-32dcdc07`; the difficulty curve is approved.
+
 ## M6 — Polish and v1.0 release
 
 **Demonstrable result:** v1.0 live on production with its card shown in the portal.
 
-- [ ] M6.1 Balance pass from the owner's play-test notes (2026-10-20)
+- [x] M6.1 Balance pass from the owner's play-test notes (2026-10-20); released 2026-10-21 (`20261021T121636Z-32dcdc07`) and play-tested by the owner ("Looks good")
   - [x] The helicopter faces the way it flies; the gun fires along the tilted body; flying into a building costs a little health
   - [x] Tank shells pass in front of buildings, like the soldiers' shots
   - [x] A mission needs 70% of its people saved to count as complete
