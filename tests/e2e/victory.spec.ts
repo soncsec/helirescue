@@ -33,6 +33,21 @@ async function reached(page: Page, furthest: number, highScore = 0): Promise<voi
   );
 }
 
+/** Waits for `n` animation frames in the page, so the game has handled earlier input. */
+async function frames(page: Page, n: number): Promise<void> {
+  await page.evaluate(
+    (count) =>
+      new Promise<void>((done) => {
+        const step = (left: number): void => {
+          if (left <= 0) done();
+          else requestAnimationFrame(() => step(left - 1));
+        };
+        step(count);
+      }),
+    n,
+  );
+}
+
 test('a first game starts at mission 1, with nothing else on offer', async ({ page }) => {
   await openTitle(page);
   const t = await title(page);
@@ -50,8 +65,13 @@ test('the title offers every mission reached, starting at the furthest', async (
   await page.keyboard.press('ArrowLeft');
   await expect.poll(async () => (await title(page))?.mission).toBe(2);
   expect((await title(page))?.lines).toContain('< MISSION 2: FACTORY DISTRICT >');
+  // One press at a time, each seen to land: on CI, Right, Right and Left sent within
+  // 25 ms once left the Left unhandled. The second Right changes nothing (3 is the
+  // furthest), so give it two frames to be handled before checking it stayed at 3.
   await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await title(page))?.mission).toBe(3);
   await page.keyboard.press('ArrowRight');
+  await frames(page, 2);
   await expect.poll(async () => (await title(page))?.mission).toBe(3);
   await page.keyboard.press('ArrowLeft');
   // Let the picker take the press before starting (Enter could otherwise win the race).
