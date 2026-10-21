@@ -25,6 +25,7 @@ Read `PROJECT.md` (scope), `ARCHITECTURE.md` (decisions), and `ROADMAP.md` (curr
 - On the production server, this game may only write to its own release folder and link: `/srv/games-releases/helirescue/` and `/var/www/html/soncrant.com/pub/games/helirescue` (enforced by `scripts/release-remote.sh`).
 - Local dev server port: **5180**. Playwright's test server uses **6181**. Other games use other ports.
 - Other games' sessions share this machine. Stop only processes you started, by PID or by your own port (e.g. the pid listening on your Playwright port). Never stop processes by name (`pkill -f vite`, `pkill -f "vite preview"`, `killall node`): that kills other sessions' servers mid-run.
+- Keep test runs light on the shared machine (owner, 2026-10-21). Playwright runs 2 browsers at a time (`workers: 2`). Run long test runs and releases through `scripts/limit-cpu.sh`, which uses `nice` and caps them at 4 cores (`systemd-run --user --scope -p CPUQuota=400%`), e.g. `scripts/limit-cpu.sh npm run test:e2e`. Before a release or a full e2e run, wait until both the 1- and 5-minute load averages (`/proc/loadavg`) are under 35. Heavy runs pushed the load to 60–85 and made other games' tests and releases time out.
 - This game's portal card is its own file in the portal repo, `games/helirescue.json`. Change it only by PR to `soncsec/games-portal`.
 
 ## Always ask the owner before
