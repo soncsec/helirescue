@@ -7,6 +7,7 @@ set -uo pipefail
 
 SRC="$(cd "$(dirname "$0")/../.." && pwd)"
 T="$(mktemp -d /tmp/release-flow.XXXXXX)"
+export FAKE_LOG="$T/npm.log"
 PASS=0
 FAIL=0
 SERVER_PID=""
@@ -42,8 +43,28 @@ printf 'Repo checks\tcompleted\t%s\nBuild and test\tcompleted\tsuccess\nCodeQL a
 SH
 cat >"$T/bin/npm" <<'SH'
 #!/usr/bin/env bash
-# "npm run check" builds a tiny site; FAKE_BROKEN=1 builds one missing its script.
-if [[ "$*" == "run check" ]]; then
+# "npm run check:static" builds a tiny site; FAKE_BROKEN=1 builds one missing its script.
+# "npm run test:e2e" fails when FAKE_E2E is "once" or "twice"; the rerun of the
+# failed tests ("-- --last-failed") fails only for "twice".
+# Like Playwright, a run that got to its tests records them in .last-run.json;
+# FAKE_E2E=crash fails before that, leaving whatever file was there.
+if [[ "$*" == "run test:e2e" ]]; then
+  echo "e2e: first run" >>"$FAKE_LOG"
+  [[ "${FAKE_E2E:-}" == crash ]] && exit 1
+  mkdir -p test-results
+  if [[ -z "${FAKE_E2E:-}" ]]; then
+    echo '{"status":"passed","failedTests":[]}' >test-results/.last-run.json
+    exit 0
+  fi
+  echo '{"status":"failed","failedTests":["abc-123"]}' >test-results/.last-run.json
+  exit 1
+fi
+if [[ "$*" == "run test:e2e -- --last-failed" ]]; then
+  echo "e2e: rerun of failed tests" >>"$FAKE_LOG"
+  [[ "${FAKE_E2E:-}" != twice ]]
+  exit
+fi
+if [[ "$*" == "run check:static" ]]; then
   rm -rf dist && mkdir -p dist/assets
   printf '<!doctype html><title>HeliRescue</title><script type="module" src="./assets/index-AbCd1234.js"></script>\n' >dist/index.html
   [[ "${FAKE_BROKEN:-}" == 1 ]] || echo "// game" >dist/assets/index-AbCd1234.js
@@ -61,7 +82,7 @@ git init -q -b main
 git config user.name test && git config user.email test@example.invalid
 mkdir -p scripts deploy
 cp "$SRC/scripts/release.sh" "$SRC/scripts/release-remote.sh" "$SRC/scripts/smoke_test.py" scripts/
-printf 'dist/\ndeploy/server.env\n' >.gitignore
+printf 'dist/\ndeploy/server.env\ntest-results/\n' >.gitignore
 printf '{"name": "helirescue"}\n' >package.json
 git add -A && git commit -q -m init
 git remote add origin "$T/remote/soncsec/$GAME_REPO.git" && git push -q origin main
@@ -106,6 +127,24 @@ rm untracked.txt
 
 out="$(release deploy --dry-run)"
 if [[ $? -eq 0 && "$out" == *"Dry run"* && "$(count)" == 0 ]]; then ok "dry run uploads nothing"; else bad "dry run: $out"; fi
+
+# Browser tests that fail on a busy machine are rerun once (owner, 2026-10-21).
+: >"$FAKE_LOG"
+out="$(FAKE_E2E=once release deploy --dry-run)"
+if [[ $? -eq 0 && "$out" == *"rerunning only those, once"* && "$(grep -c . "$FAKE_LOG")" == 2 && "$(count)" == 0 ]]; then
+  ok "browser tests that fail once pass on a single rerun of the failed tests"
+else bad "rerun once: $out / $(cat "$FAKE_LOG")"; fi
+: >"$FAKE_LOG"
+out="$(FAKE_E2E=twice release deploy)"
+if [[ $? -ne 0 && "$out" == *"failed again on the rerun"* && "$(grep -c . "$FAKE_LOG")" == 2 && "$(count)" == 0 ]]; then
+  ok "browser tests that fail twice stop the release and upload nothing"
+else bad "fail twice: $out / $(cat "$FAKE_LOG") (count $(count))"; fi
+: >"$FAKE_LOG"
+mkdir -p test-results && echo '{"status":"failed","failedTests":["old-1"]}' >test-results/.last-run.json
+out="$(FAKE_E2E=crash release deploy --dry-run)"
+if [[ $? -ne 0 && "$out" == *"without a list of failed tests"* && "$(grep -c . "$FAKE_LOG")" == 1 ]]; then
+  ok "a browser run that records no failed tests is not rerun, even with an old results file"
+else bad "crash: $out / $(cat "$FAKE_LOG")"; fi
 
 out="$(release deploy)"; first="$(live)"
 if [[ $? -eq 0 && -n "$first" && "$out" == *"smoke test: passed"* ]]; then ok "first release goes live and passes the smoke test"; else bad "first release: $out"; fi
