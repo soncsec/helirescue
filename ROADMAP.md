@@ -14,7 +14,7 @@
 | M3 Mission 1 playable | Done (2026-10-19) |
 | M4 Sound | Done (2026-10-19) |
 | M5 Missions 2–5 | Done (2026-10-21) |
-| M6 Polish and v1.0 release | In progress |
+| M6 Polish and v1.0 release | Done (2026-10-21) |
 
 ## Risks driving this order
 
@@ -165,8 +165,12 @@ Order agreed with the owner on 2026-10-20: mission 2 is playable after the first
   - [x] Production headers: a strict CSP (`default-src 'self'`, no inline scripts), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, and a Permissions-Policy that blocks camera, microphone, location, payment and USB
   - [x] No third-party requests: the build's only `http(s)` strings are Phaser's console banner link and the SVG/XHTML namespace names, which are never fetched. localStorage holds only the `helirescue` key (H9)
   - [x] Unchanged by design: the site is served over HTTP on port 80 (ADR-010, the owner's decision); the game sends no personal data and holds no secrets
-- [ ] M6.4 Production release with the owner's approval; docs updated
+- [x] M6.4 Production release with the owner's approval; docs updated
   - [x] The owner approved the v1.0 release of main after #53, tagged `v1.0.0` (2026-10-21). GitHub never ran CI on the #53 merge commit, so this PR's merge gives the release a commit with CI
-  - [ ] Released and tagged; production check passed
+  - [x] Released 2026-10-21 as `20261021T201431Z-7f574f3f` (main `7f574f3`), tagged `v1.0.0`. The release's browser tests needed their one rerun (WebKit `jets.spec.ts:100` failed once, then passed), and the smoke test passed
+  - [x] Production check run 39668625797: ZAP 0 failures, the same 4 informational warnings as M6.3; the live `release.json` shows the new release; the portal card is `live`
+  - [x] The owner has played it on a desktop and on a phone in landscape (2026-10-21)
 
 **Acceptance criteria:** every item in PROJECT.md section 4 (definition of done) is met and checked on the live site, on a desktop and on a phone.
+
+**Accepted** on 2026-10-21: v1.0 is live at `games.soncrant.com/helirescue/` (release `20261021T201431Z-7f574f3f`, tag `v1.0.0`).
