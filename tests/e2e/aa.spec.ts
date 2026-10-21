@@ -90,7 +90,6 @@ test('bullets at roof height destroy a gun after a few hits', async ({ page }) =
   await fly(page, { kind: 'move', x: safeX, y, floorY: g.floorY, controls: 'keys' });
   await fly(page, { kind: 'move', x, y, floorY: g.floorY, controls: 'keys' });
   expect((await snapshot(page)).facing).toBe(1);
-  await page.keyboard.down('z');
   await fly(page, {
     kind: 'hold',
     x,
@@ -99,8 +98,8 @@ test('bullets at roof height destroy a gun after a few hits', async ({ page }) =
     controls: 'keys',
     untilGunDown: 0,
     forMs: 15_000,
+    fire: true,
   });
-  await page.keyboard.up('z');
   const s = await snapshot(page);
   expect(s.enemies.guns[0]?.alive).toBe(false);
   expect(s.weapons.impacts).toBeGreaterThanOrEqual(ENEMIES.aaHp);

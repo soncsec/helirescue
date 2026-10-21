@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { GAME_WIDTH, HELI_SHAPE, LANDING, TOUCH } from '../../src/config/tuning';
+import { FLIGHT, GAME_WIDTH, HELI_SHAPE, LANDING, TOUCH } from '../../src/config/tuning';
 import type { Roof } from '../../src/logic/world';
 import type { GameSnapshot } from '../../src/scenes/GameScene';
 
@@ -43,6 +43,14 @@ export interface Leg {
   /** move or hold: stop once the helicopter has taken this many flak hits. */
   untilHits?: number;
   /**
+   * hold: pull the trigger (Z) only while on the spot, at height, nearly
+   * level and facing the way it faced when the hold began, so every shot
+   * leaves level towards the target. On a slow machine the autopilot can spend
+   * seconds tilted, and correcting an overshoot can be fast enough to turn the
+   * helicopter round; it then turns back with C, as a player would.
+   */
+  fire?: boolean;
+  /**
    * slide: hold height y while speeding up to the right, then come down still
    * pushing right once moving at least this fast (px/s); ends on touch-down.
    */
@@ -65,6 +73,8 @@ export const PILOT = {
   cruise: 140,
   /** Push only when the speed is this far off (px/s). */
   slack: 8,
+  /** Above this speed (px/s) the helicopter faces the way it flies; slower, C turns it. */
+  turnSpeed: FLIGHT.turnSpeed,
   /** Coming down: brake with Up above this sink rate (px/s), half the hard-landing speed. */
   sinkRate: LANDING.safeSpeed / 2,
   /** Within this many px of the roof, stop pushing Down and sink with no input (about 12 px/s). */
@@ -95,6 +105,8 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           ArrowUp: 38,
           ArrowRight: 39,
           ArrowDown: 40,
+          z: 90,
+          c: 67,
         };
         const held = new Set<string>();
         let fingerDown = false;
@@ -153,6 +165,32 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           if (!fingerDown) mouse('mousedown', fx, fy);
           fingerDown = true;
         };
+
+        let firing = false;
+        const trigger = (on: boolean): void => {
+          if (on === firing) return;
+          key(on ? 'keydown' : 'keyup', 'z');
+          firing = on;
+        };
+        const release = (): void => {
+          press(0, 0);
+          trigger(false);
+        };
+        let face: 1 | -1 | undefined;
+        // Turned round by a fast correction: turn back once slow enough for C to work.
+        const faceBack = (s: GameSnapshot): void => {
+          face ??= s.facing;
+          if (s.facing !== face && Math.abs(s.velocity.x) < p.turnSpeed) {
+            key('keydown', 'c');
+            key('keyup', 'c');
+          }
+        };
+        // On the spot, at height, nearly level and facing the target: a shot now leaves level.
+        const steady = (s: GameSnapshot): boolean =>
+          s.facing === face &&
+          Math.abs(s.player.x - leg.x) <= p.spot &&
+          (leg.y === undefined || Math.abs(s.player.y - leg.y) <= p.band) &&
+          Math.abs(s.tilt) < p.level;
 
         const done = (s: GameSnapshot): boolean => {
           if (leg.kind === 'climb') return s.player.y < p.cruiseY;
@@ -220,7 +258,7 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
             return;
           }
           if (done(s) && leg.kind === 'land' && Math.abs(s.player.y - leg.floorY) > 2) {
-            press(0, 0);
+            release();
             reject(
               new Error(
                 `landed at y ${Math.round(s.player.y)}, not ${leg.floorY}: ${trail.filter((_, i) => i % 10 === 0).join(' | ')}`,
@@ -229,12 +267,12 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
             return;
           }
           if (done(s)) {
-            press(0, 0);
+            release();
             resolve(s);
             return;
           }
           if (s.mode === 'crashed' || performance.now() > deadline) {
-            press(0, 0);
+            release();
             const at = `x ${Math.round(s.player.x)} y ${Math.round(s.player.y)} vx ${Math.round(s.velocity.x)}`;
             reject(
               new Error(
@@ -249,6 +287,8 @@ export async function fly(page: Page, leg: Leg): Promise<GameSnapshot> {
           );
           if (trail.length > 3000) trail.shift();
           press(x, y);
+          if (leg.fire === true) faceBack(s);
+          trigger(leg.fire === true && steady(s));
           requestAnimationFrame(frame);
         };
         requestAnimationFrame(frame);

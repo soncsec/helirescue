@@ -128,7 +128,6 @@ test('bullets at tank height destroy it after a few hits', async ({ page }) => {
   if ((await snapshot(page)).facing !== (left ? 1 : -1)) await page.keyboard.press('c');
   await expect.poll(async () => (await snapshot(page)).facing, WAIT).toBe(left ? 1 : -1);
   await fly(page, { kind: 'move', x, y, floorY: FLOOR, controls: 'keys' });
-  await page.keyboard.down('z');
   await fly(page, {
     kind: 'hold',
     x,
@@ -137,8 +136,8 @@ test('bullets at tank height destroy it after a few hits', async ({ page }) => {
     controls: 'keys',
     untilTankDown: 0,
     forMs: 15_000,
+    fire: true,
   });
-  await page.keyboard.up('z');
   const s = await snapshot(page);
   expect(s.enemies.tanks[0]?.alive).toBe(false);
   expect(s.weapons.impacts).toBeGreaterThanOrEqual(TANKS.hp);

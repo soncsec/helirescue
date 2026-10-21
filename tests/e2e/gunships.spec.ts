@@ -75,7 +75,6 @@ test('bullets bring a gunship down', async ({ page }) => {
   const g = await ship(page);
   if ((await snapshot(page)).facing !== 1) await page.keyboard.press('c');
   await expect.poll(async () => (await snapshot(page)).facing, WAIT).toBe(1);
-  await page.keyboard.down('z');
   await fly(page, {
     kind: 'hold',
     x: SPOT_X,
@@ -84,8 +83,8 @@ test('bullets bring a gunship down', async ({ page }) => {
     controls: 'keys',
     untilEvent: 'gunship-down',
     forMs: 20_000,
+    fire: true,
   });
-  await page.keyboard.up('z');
   const s = await snapshot(page);
   expect(s.events).toContain('gunship-down');
   expect(s.enemies.gunships[0]?.alive).toBe(false);

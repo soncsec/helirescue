@@ -108,7 +108,6 @@ test('bullets bring a jet down', async ({ page }) => {
   const facing = w.side;
   if ((await snapshot(page)).facing !== facing) await page.keyboard.press('c');
   await expect.poll(async () => (await snapshot(page)).facing, WAIT).toBe(facing);
-  await page.keyboard.down('z');
   await fly(page, {
     kind: 'hold',
     x: SAFE_X,
@@ -117,8 +116,8 @@ test('bullets bring a jet down', async ({ page }) => {
     controls: 'keys',
     untilJetDown: true,
     forMs: 15_000,
+    fire: true,
   });
-  await page.keyboard.up('z');
   const s = await snapshot(page);
   expect(s.events).toContain('jet-down');
   expect(s.enemies.jets.every((j) => !j.alive)).toBe(true);
